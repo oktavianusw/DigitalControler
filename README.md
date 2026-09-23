@@ -3,7 +3,8 @@
 Turn your iPhone into a trackpad and keyboard for your Mac, over your local Wi-Fi.
 
 Move the pointer, tap to click, scroll with two fingers, drag, pinch to zoom, swipe with three fingers for
-Mission Control, type on a Mac keyboard, or fire common shortcuts, all from your phone.
+Mission Control, type on a Mac keyboard, fire common shortcuts, or see your Mac's screen and tap to click on it,
+all from your phone.
 
 <p align="center">
   <img src="docs/screenshots/trackpad.png" alt="Trackpad screen: the Mac's name and latency, mode switcher, a large touch surface, Left and Right click buttons, and a scroll strip" width="820">
@@ -24,7 +25,8 @@ reads your fingers                  turns messages into real input events
 - **Pairing and encryption:** the helper shows a 6-digit PIN in the menu bar. The PIN becomes a TLS pre-shared key,
   so a wrong PIN fails the handshake and all traffic is encrypted. After 10 wrong PINs the helper stops
   accepting connections until you make a new PIN.
-- **Protocol:** every message is 9 bytes (1-byte kind + two Float32 values), sent over TCP with Nagle off.
+- **Protocol:** every iPhone → Mac message is 9 bytes (1-byte kind + two Float32 values), sent over TCP with
+  Nagle off. Mac → iPhone messages (latency echoes, screen pictures) carry a 5-byte kind + length header.
   The traffic is marked as interactive so Wi-Fi power saving doesn't hold packets back.
 - **Input on the Mac:** the helper posts `CGEvent`s. Scrolls are trackpad-style (continuous pixel deltas with
   scroll and momentum phases), so apps rubber-band and glide like they do with a real trackpad.
@@ -44,13 +46,17 @@ reads your fingers                  turns messages into real input events
 | Three fingers up / down | Mission Control / App windows |
 | Three fingers left / right | Switch desktop (Space) |
 
-Also on the trackpad screen: Left and Right click buttons you can hold (hold Left click with your thumb and
-drag on the pad), a one-finger scroll strip, and a live connection latency readout.
+Also on the trackpad screen: a one-finger scroll strip and a live connection latency readout.
 
 **Keyboard:** the Mac layout with sticky modifiers (tap ⌘, then C) and caps lock.
 
 **Shortcuts:** a "Type to Mac" field that types anything, including emoji, plus one-tap buttons for Copy, Paste,
 Undo, Spotlight, Switch app, Mission Control, volume, and play/pause. It also has a mini trackpad.
+
+**Screen:** see your Mac's screen on the iPhone and work on it directly. With more than one display, all of them
+show up as a grid of thumbnails; tap one to open it large. On the picture: tap to click that spot, two-finger tap to
+right-click, hold then move to drag, two fingers to scroll, and pinch to zoom the picture (up to 5×) to hit small
+targets. For now it sends JPEG snapshots at up to 5 frames per second. Smooth video streaming is planned.
 
 **Settings:** tracking and scroll speed, natural scrolling, tap to click, orientation lock
 (portrait / landscape, works even with rotation lock on), haptics, and toggles for every on-screen extra.
@@ -82,6 +88,7 @@ The app reconnects to your last Mac automatically.
    to the app's location, and Xcode's build folder moves around.
 3. **Allow Accessibility:** System Settings → Privacy & Security → Accessibility → turn on **DigitalControlerMac**.
    Then quit the helper from its menu and open it again. macOS only lets an app post input events after a relaunch.
+   For the Screen tab, also allow **Screen Recording** (same place, *Screen & System Audio Recording*) and relaunch again.
 4. **Run the iPhone app:** run the `DigitalControler` scheme on your iPhone and allow Local Network access.
 5. **Pair:** tap your Mac, enter the PIN from the menu bar, and you're in.
 
@@ -107,7 +114,7 @@ Shared/Protocol.swift             Wire format, service name/port, TLS-PSK pairin
 DigitalControler/                 iPhone app
   Client.swift                    Bonjour browsing, connection, auto-reconnect, latency ping
   TouchpadView.swift              Multi-touch surface: pointer, taps, scroll, drag, pinch, 3-finger swipes
-  RemoteView.swift                Connected screen: Trackpad and Shortcuts modes, click buttons, scroll strip
+  RemoteView.swift                Connected screen: Trackpad, Shortcuts and Screen modes, scroll strip
   KeyboardView.swift              Mac keyboard layout
   ConnectView.swift               Find and pair with a Mac
   SettingsView.swift, Prefs.swift Settings screen and stored preferences
@@ -116,6 +123,7 @@ DigitalControler/                 iPhone app
 DigitalControlerMac/              Mac menu bar helper
   Server.swift                    Bonjour listener, PIN pairing, lockout, ping echo
   Injector.swift                  Turns messages into mouse, scroll, and keyboard events
+  ScreenStreamer.swift            Captures the displays (ScreenCaptureKit) and sends them as JPEG
 ```
 
 ## Known limitations

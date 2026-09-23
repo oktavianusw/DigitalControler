@@ -6,6 +6,7 @@
 import Foundation
 import Network
 import Observation
+import UIKit
 
 /// Finds Macs running the helper and holds the connection to the chosen one.
 @Observable
@@ -17,6 +18,13 @@ final class Client {
     private(set) var reconnecting = false
     /// Round trip to the Mac and back, refreshed every couple of seconds while connected.
     private(set) var latencyMs: Int?
+    /// The Mac's displays (names, left to right) and the latest picture of each, while the Screen tab is open.
+    private(set) var displays: [String] = []
+    private(set) var screenFrames: [Int: UIImage] = [:]
+    private(set) var screenError: String?
+    /// The display shown large, nil while picking from thumbnails.
+    private(set) var selectedDisplay: Int?
+    private var sharingScreen = false // kept so a reconnect resumes the stream
     var connecting: Bool { connection != nil && !connected }
     var error: String?
     private var browser: NWBrowser?
@@ -56,6 +64,33 @@ final class Client {
         let host = host.trimmingCharacters(in: .whitespaces)
         guard !host.isEmpty else { return }
         connect(to: .hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: servicePort)!), pin: pin)
+    }
+
+    // ponytail: fixed sizes; the quality setting comes in phase 8.
+    private static let thumbnailEdge = 640
+    private static let fullEdge = 1600
+
+    func startScreen() {
+        sharingScreen = true
+        screenError = nil
+        let display = selectedDisplay
+        send(Message(kind: .screenStart,
+                     dx: Float(display == nil ? Self.thumbnailEdge : Self.fullEdge),
+                     dy: Float(display ?? -1)))
+    }
+
+    /// Show one display large, or nil to go back to thumbnails of all of them.
+    func selectDisplay(_ index: Int?) {
+        selectedDisplay = index
+        screenFrames = screenFrames.filter { $0.key == index } // keep the thumbnail until the sharp frame lands
+        startScreen()
+    }
+
+    func stopScreen() {
+        sharingScreen = false
+        selectedDisplay = nil
+        screenFrames = [:]
+        send(Message(kind: .screenStop))
     }
 
     static var lastMac: String? { UserDefaults.standard.string(forKey: "lastMac") }
@@ -119,6 +154,7 @@ final class Client {
             UserDefaults.standard.set(pin, forKey: "pin." + endpoint.name)
             UserDefaults.standard.set(endpoint.name, forKey: "lastMac")
             receive(on: c)
+            if sharingScreen { startScreen() } // reconnected mid-share
             ping()
             pingTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated { self?.ping() }
@@ -157,19 +193,44 @@ final class Client {
         send(Message(kind: .ping, dx: Float(pingSeq)))
     }
 
-    /// The Mac only ever sends back ping echoes.
+    /// Mac → iPhone: a 5-byte header, then that many bytes of payload.
     private func receive(on c: NWConnection) {
-        c.receive(minimumIncompleteLength: Message.size, maximumLength: Message.size) { [weak self] data, _, isComplete, error in
+        c.receive(minimumIncompleteLength: Downstream.headerSize, maximumLength: Downstream.headerSize) { [weak self] data, _, isComplete, error in
             MainActor.assumeIsolated {
-                self?.received(data, on: c)
-                if error == nil, !isComplete { self?.receive(on: c) }
+                guard let self, error == nil, !isComplete, let data, let header = Downstream.header(data) else { return }
+                guard header.1 > 0 else {
+                    self.received(header.0, Data(), on: c)
+                    return self.receive(on: c)
+                }
+                c.receive(minimumIncompleteLength: header.1, maximumLength: header.1) { payload, _, isComplete, error in
+                    MainActor.assumeIsolated {
+                        guard error == nil, let payload else { return }
+                        self.received(header.0, payload, on: c)
+                        if !isComplete { self.receive(on: c) }
+                    }
+                }
             }
         }
     }
 
-    private func received(_ data: Data?, on c: NWConnection) {
-        guard c === connection, let data, let m = Message(data), m.kind == .ping, Int(m.dx) == pingSeq else { return }
-        latencyMs = max(1, Int(Date().timeIntervalSince(pingSentAt) * 1000))
+    private func received(_ kind: Downstream, _ payload: Data, on c: NWConnection) {
+        guard c === connection else { return }
+        switch kind {
+        case .pong:
+            guard let m = Message(payload), m.kind == .ping, Int(m.dx) == pingSeq else { return }
+            latencyMs = max(1, Int(Date().timeIntervalSince(pingSentAt) * 1000))
+        case .frame:
+            guard sharingScreen, let index = payload.first.map(Int.init),
+                  selectedDisplay == nil || selectedDisplay == index, // drop thumbnails still in flight
+                  let image = UIImage(data: payload.dropFirst()) else { return }
+            screenFrames[index] = image
+            screenError = nil
+        case .displays:
+            displays = String(decoding: payload, as: UTF8.self).split(separator: "\n").map(String.init)
+            if displays.count == 1, selectedDisplay == nil { selectDisplay(0) } // nothing to pick from
+        case .screenError:
+            screenError = String(decoding: payload, as: UTF8.self)
+        }
     }
 
     private func close() {

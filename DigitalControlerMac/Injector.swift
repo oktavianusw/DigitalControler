@@ -45,7 +45,7 @@ enum Injector {
             }
         case .text:
             if let raw = UInt32(exactly: m.dx), let scalar = Unicode.Scalar(raw) { type(scalar) }
-        case .ping: break // answered by Server
+        case .ping, .screenStart, .screenStop, .moveTo: break // handled by Server
         }
     }
 
@@ -106,6 +106,14 @@ enum Injector {
             e?.flags = flags
             e?.post(tap: .cghidEventTap)
         }
+        // macOS keeps the last posted modifiers as "held". Without this, ⌃ from a shortcut stays down and
+        // every later click, even from a real mouse, becomes ⌃-click, which is a right click.
+        if !flags.isEmpty {
+            let release = CGEvent(source: nil)
+            release?.type = .flagsChanged
+            release?.flags = []
+            release?.post(tap: .cghidEventTap)
+        }
     }
 
     /// The iPhone went away mid-gesture: never leave the mouse button stuck down or a scroll half-open.
@@ -134,6 +142,16 @@ enum Injector {
                 mouseCursorPosition: to, mouseButton: .left)?
             .post(tap: .cghidEventTap)
         lastPosted = (to, Date())
+    }
+
+    /// Puts the pointer at a spot on the shared screen: `x`/`y` run 0...1 across `display`.
+    static func moveTo(x: CGFloat, y: CGFloat, on display: CGRect) {
+        let p = CGPoint(x: display.minX + min(max(x, 0), 1) * (display.width - 1),
+                        y: display.minY + min(max(y, 0), 1) * (display.height - 1))
+        CGEvent(mouseEventSource: nil, mouseType: leftIsDown ? .leftMouseDragged : .mouseMoved,
+                mouseCursorPosition: p, mouseButton: .left)?
+            .post(tap: .cghidEventTap)
+        lastPosted = (p, Date())
     }
 
     private static func click(_ button: CGMouseButton) {

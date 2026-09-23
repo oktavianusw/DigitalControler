@@ -92,15 +92,23 @@ struct PillPicker<T: Hashable & Identifiable>: View {
     let title: (T) -> String
     var height: CGFloat = 40
     var fillWidth = false
+    /// When set, options show as icons (titles stay as accessibility labels). For tight spaces.
+    var icon: ((T) -> String)?
 
     var body: some View {
         HStack(spacing: 2) {
             ForEach(options) { option in
                 let selected = option == selection
-                Button(title(option)) { selection = option }
+                Button { selection = option } label: {
+                    if let icon {
+                        Label(title(option), systemImage: icon(option)).labelStyle(.iconOnly)
+                    } else {
+                        Text(title(option)).lineLimit(1).minimumScaleFactor(0.75)
+                    }
+                }
                     .font(.system(size: fillWidth ? 14 : 13, weight: fillWidth ? .semibold : .medium))
                     .foregroundStyle(selected ? .black : .white.opacity(0.8))
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, fillWidth ? 6 : 14)
                     .frame(maxWidth: fillWidth ? .infinity : nil, maxHeight: .infinity)
                     .background(Capsule().fill(.white.opacity(selected ? 0.92 : 0)))
                     .contentShape(Capsule())

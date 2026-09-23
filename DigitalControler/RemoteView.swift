@@ -22,6 +22,7 @@ struct RemoteView: View {
             case .trackpad: TrackpadPane(send: client.send)
             case .keyboard: KeyboardView(send: client.send)
             case .shortcuts: ShortcutsPane(send: client.send)
+            case .screen: ScreenPane(client: client)
             }
         }
         // Landscape safe area pads both sides for the Dynamic Island, but it's only on one side:
@@ -58,22 +59,35 @@ struct RemoteView: View {
         }
     }
 
+    /// Full labels when there's room (landscape); icons and a bare status dot when there isn't (portrait).
     private var topBar: some View {
+        ViewThatFits(in: .horizontal) {
+            topBar(compact: false)
+            topBar(compact: true)
+        }
+    }
+
+    private func topBar(compact: Bool) -> some View {
         HStack(spacing: 12) {
             HStack(spacing: 8) {
                 Circle().fill(.white).frame(width: 7, height: 7).shadow(color: .white.opacity(0.8), radius: 4)
-                Text(client.connected ? client.macName : "Reconnecting…").lineLimit(1)
-                if showLatency, client.connected, let ms = client.latencyMs {
-                    Text("\(ms) ms").foregroundStyle(.white.opacity(0.55)).monospacedDigit()
+                if !compact {
+                    Text(client.connected ? client.macName : "Reconnecting…").lineLimit(1)
+                    if showLatency, client.connected, let ms = client.latencyMs {
+                        Text("\(ms) ms").foregroundStyle(.white.opacity(0.55)).monospacedDigit()
+                    }
                 }
             }
             .font(.system(size: 13))
-            .padding(.horizontal, 14)
+            .padding(.horizontal, compact ? 16 : 14)
             .frame(height: 40)
             .glass(in: Capsule())
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(client.connected ? "Connected to \(client.macName)" : "Reconnecting")
+            .frame(maxWidth: compact ? nil : .infinity, alignment: .leading)
+            .fixedSize()
 
-            PillPicker(options: Mode.allCases, selection: $mode, title: \.title)
+            PillPicker(options: Mode.allCases, selection: $mode, title: \.title, icon: compact ? \.icon : nil)
                 .fixedSize()
 
             Button { showSettings = true } label: {
@@ -83,7 +97,7 @@ struct RemoteView: View {
             }
             .buttonStyle(GlassButtonStyle(shape: Circle()))
             .accessibilityLabel("Settings")
-            .frame(maxWidth: .infinity, alignment: .trailing)
+            .frame(maxWidth: compact ? nil : .infinity, alignment: .trailing)
         }
     }
 }
@@ -115,7 +129,6 @@ private struct TrackpadPane: View {
     let send: (Message) -> Void
     @State private var gesture: String?
     @AppStorage(Prefs.gestureHints) private var gestureHints = true
-    @AppStorage(Prefs.showClickButtons) private var showClickButtons = true
     @AppStorage(Prefs.scrollStrip) private var scrollStrip = true
 
     var body: some View {
@@ -146,51 +159,11 @@ private struct TrackpadPane: View {
                             .allowsHitTesting(false)
                     }
                 }
-
-                if showClickButtons {
-                    HStack(spacing: 10) {
-                        HoldButton(title: "Left click") { send(Message(kind: $0 ? .leftDown : .leftUp)) }
-                        HoldButton(title: "Right click") { send(Message(kind: $0 ? .rightDown : .rightUp)) }
-                    }
-                    .frame(height: 48)
-                }
             }
             if scrollStrip {
                 ScrollStrip(send: send).frame(width: 48)
             }
         }
-    }
-}
-
-/// A mouse button: pressed while your finger is on it, so you can hold it with a thumb and drag on the pad.
-private struct HoldButton: View {
-    let title: String
-    let action: (_ down: Bool) -> Void
-    @State private var pressed = false
-    @AppStorage(Prefs.clickHaptics) private var haptics = true
-
-    var body: some View {
-        Text(title)
-            .font(.system(size: 14, weight: .medium))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .glass(in: Capsule())
-            .overlay(Capsule().fill(.white.opacity(pressed ? 0.14 : 0)))
-            .contentShape(Capsule())
-            .gesture(DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    guard !pressed else { return }
-                    pressed = true
-                    action(true)
-                    if haptics { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
-                }
-                .onEnded { _ in
-                    pressed = false
-                    action(false)
-                })
-            .accessibilityElement()
-            .accessibilityLabel(title)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { action(true); action(false) }
     }
 }
 
@@ -237,6 +210,110 @@ private struct ScrollStrip: View {
         .accessibilityAdjustableAction { direction in
             send(Message(kind: .scroll, dy: direction == .increment ? -120 : 120))
             send(Message(kind: .scrollEnd))
+        }
+    }
+}
+
+// MARK: - Screen
+
+/// The Mac's screens, live. With several displays, pick one from a grid of thumbnails first,
+/// then work on it directly (see `ScreenSurfaceView` for the gestures).
+private struct ScreenPane: View {
+    let client: Client
+    @AppStorage(Prefs.clickHaptics) private var haptics = true
+    @AppStorage(Prefs.scrollSpeed) private var scrollSpeed = 1.0
+    @AppStorage(Prefs.naturalScrolling) private var naturalScrolling = true
+    @AppStorage(Prefs.gestureHints) private var gestureHints = true
+
+    var body: some View {
+        Group {
+            if let error = client.screenError {
+                VStack(spacing: 10) {
+                    Image(systemName: "rectangle.dashed.badge.record").font(.system(size: 28))
+                    Text(error).font(.system(size: 14)).multilineTextAlignment(.center)
+                }
+                .foregroundStyle(.white.opacity(0.7))
+                .padding(24)
+            } else if let index = client.selectedDisplay {
+                display(index)
+            } else if client.displays.count > 1 {
+                grid
+            } else {
+                ProgressView("Waiting for the Mac's screen…").tint(.white).foregroundStyle(.white.opacity(0.7))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(8)
+        .glassPanel()
+        .onAppear { client.startScreen() }
+        .onDisappear { client.stopScreen() }
+    }
+
+    private var grid: some View {
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 10)], spacing: 10) {
+                ForEach(client.displays.indices, id: \.self) { i in
+                    Button { client.selectDisplay(i) } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Group {
+                                if let frame = client.screenFrames[i] {
+                                    Image(uiImage: frame).resizable().scaledToFit()
+                                } else {
+                                    Rectangle().fill(.white.opacity(0.05))
+                                        .aspectRatio(16 / 10, contentMode: .fit)
+                                        .overlay { ProgressView().tint(.white) }
+                                }
+                            }
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            Text(client.displays[i]).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                        }
+                        .padding(10)
+                    }
+                    .buttonStyle(GlassButtonStyle(shape: RoundedRectangle(cornerRadius: 18, style: .continuous)))
+                    .accessibilityLabel("Show \(client.displays[i])")
+                }
+            }
+            .padding(4)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    private func display(_ index: Int) -> some View {
+        ZStack(alignment: .topLeading) {
+            if let frame = client.screenFrames[index] {
+                ScreenSurfaceView(image: frame, send: client.send, scrollSpeed: scrollSpeed,
+                                  naturalScrolling: naturalScrolling, haptics: haptics)
+                    .id(index) // fresh zoom for each display
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .accessibilityLabel(client.displays.indices.contains(index) ? client.displays[index] : "Mac screen")
+                    .overlay(alignment: .bottom) {
+                        if gestureHints {
+                            ViewThatFits(in: .horizontal) {
+                                Text("Tap to click · Hold to drag · Two fingers to scroll · Pinch to zoom")
+                                Text("Tap · Hold to drag · 2 fingers scroll · Pinch zoom")
+                            }
+                                .font(.system(size: 11))
+                                .lineLimit(1)
+                                .padding(.horizontal, 10)
+                                .frame(height: 24)
+                                .glass(in: Capsule())
+                                .padding(.bottom, 8)
+                                .allowsHitTesting(false)
+                        }
+                    }
+            } else {
+                ProgressView().tint(.white).frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            if client.displays.count > 1 {
+                Button { client.selectDisplay(nil) } label: {
+                    Label("All screens", systemImage: "square.grid.2x2")
+                        .font(.system(size: 13, weight: .medium))
+                        .padding(.horizontal, 12)
+                        .frame(height: 32)
+                }
+                .buttonStyle(.glassCapsule)
+                .padding(8)
+            }
         }
     }
 }

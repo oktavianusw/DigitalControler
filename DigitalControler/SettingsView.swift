@@ -16,7 +16,6 @@ struct SettingsView: View {
     @AppStorage(Prefs.naturalScrolling) private var naturalScrolling = true
     @AppStorage(Prefs.tapToClick) private var tapToClick = true
     @AppStorage(Prefs.twoFingerRightClick) private var twoFingerRightClick = true
-    @AppStorage(Prefs.showClickButtons) private var showClickButtons = true
     @AppStorage(Prefs.clickHaptics) private var clickHaptics = true
     @AppStorage(Prefs.fingerDots) private var fingerDots = true
     @AppStorage(Prefs.gestureHints) private var gestureHints = true
@@ -57,7 +56,6 @@ struct SettingsView: View {
                     group {
                         toggle("Tap to click", $tapToClick)
                         toggle("Two-finger tap to right-click", $twoFingerRightClick)
-                        toggle("Show click buttons", $showClickButtons)
                         toggle("Haptic on click", $clickHaptics, last: true)
                     }
                 }

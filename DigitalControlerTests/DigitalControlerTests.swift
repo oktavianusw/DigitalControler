@@ -29,6 +29,16 @@ final class DigitalControlerTests: XCTestCase {
         XCTAssertNil(Message(Message(kind: .scroll, dx: 1e9).data))            // absurd value
     }
 
+    func testDownstreamFraming() {
+        let packet = Downstream.frame.packet(Data([1, 2, 3]))
+        let header = Downstream.header(packet.prefix(Downstream.headerSize))
+        XCTAssertEqual(header?.0, .frame)
+        XCTAssertEqual(header?.1, 3)
+        XCTAssertEqual(packet.dropFirst(Downstream.headerSize), Data([1, 2, 3]))
+        XCTAssertNil(Downstream.header(Data([9, 0, 0, 0, 0])))            // unknown kind
+        XCTAssertNil(Downstream.header(Data([1, 255, 255, 255, 255])))    // absurd length
+    }
+
     func testGainGrowsWithSpeedAndIsCapped() {
         XCTAssertLessThan(TouchpadView.gain(speed: 0), TouchpadView.gain(speed: 800))
         XCTAssertEqual(TouchpadView.gain(speed: 1500), TouchpadView.gain(speed: 10_000))

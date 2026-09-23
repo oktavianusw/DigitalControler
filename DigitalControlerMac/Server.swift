@@ -19,6 +19,8 @@ final class Server {
     private var listener: NWListener?
     private var connection: NWConnection?
     private var failedAttempts = 0
+    private let screen = ScreenStreamer()
+    private(set) var sharingScreen = false
 
     init() { start() }
 
@@ -36,7 +38,7 @@ final class Server {
         listener?.cancel()
         connection?.cancel()
         connection = nil
-        Injector.reset()
+        endSession()
         failedAttempts = 0
         do {
             let params = NWParameters.paired(pin: pin)
@@ -77,7 +79,7 @@ final class Server {
         case .ready:
             failedAttempts = 0
             connection?.cancel() // one iPhone at a time, newest wins
-            Injector.reset()
+            endSession()
             connection = c
             status = "Connected"
             log.notice("iPhone connected, accessibility trusted: \(AXIsProcessTrusted())")
@@ -87,16 +89,23 @@ final class Server {
             if connection === c {
                 connection = nil
                 status = "Waiting for iPhone…"
-                Injector.reset()
+                endSession()
             } else {
                 handshakeFailed() // never got ready: wrong PIN
             }
         case .cancelled where connection === c:
             connection = nil
             status = "Waiting for iPhone…"
-            Injector.reset()
+            endSession()
         default: break
         }
+    }
+
+    /// The iPhone went away (or was replaced): release held buttons and stop sharing the screen.
+    private func endSession() {
+        Injector.reset()
+        screen.stop()
+        sharingScreen = false
     }
 
     /// Stops online PIN guessing: after 10 wrong PINs, stop listening until the user makes a new PIN.
@@ -108,16 +117,34 @@ final class Server {
         status = "Locked: too many wrong PINs. Click New PIN."
     }
 
+    private func handle(_ m: Message, raw: Data, from c: NWConnection) {
+        guard c === connection else { return }
+        switch m.kind {
+        case .ping:
+            c.send(content: Downstream.pong.packet(raw), completion: .idempotent) // for the iPhone's latency readout
+        case .screenStart:
+            sharingScreen = true
+            screen.start(maxEdge: Int(m.dx), display: m.dy < 0 ? nil : Int(m.dy)) { [weak c] kind, payload in
+                await withCheckedContinuation { done in
+                    guard let c else { return done.resume(returning: false) }
+                    c.send(content: kind.packet(payload), completion: .contentProcessed { done.resume(returning: $0 == nil) })
+                }
+            }
+        case .screenStop:
+            screen.stop()
+            sharingScreen = false
+        case .moveTo:
+            Injector.moveTo(x: CGFloat(m.dx), y: CGFloat(m.dy),
+                            on: screen.displayBounds ?? CGDisplayBounds(CGMainDisplayID()))
+        default:
+            Injector.handle(m)
+        }
+    }
+
     private func receive(on c: NWConnection) {
         c.receive(minimumIncompleteLength: Message.size, maximumLength: Message.size) { [weak self] data, _, isComplete, error in
             MainActor.assumeIsolated {
-                if let data, let m = Message(data) {
-                    if m.kind == .ping {
-                        c.send(content: data, completion: .idempotent) // echo for the iPhone's latency readout
-                    } else {
-                        Injector.handle(m)
-                    }
-                }
+                if let data, let m = Message(data) { self?.handle(m, raw: data, from: c) }
                 if error == nil, !isComplete { self?.receive(on: c) }
             }
         }

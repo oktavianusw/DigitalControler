@@ -15,7 +15,6 @@ enum Prefs {
     static let naturalScrolling = "naturalScrolling"
     static let tapToClick = "tapToClick"
     static let twoFingerRightClick = "twoFingerRightClick"
-    static let showClickButtons = "showClickButtons"
     static let clickHaptics = "clickHaptics"
     static let fingerDots = "fingerDots"
     static let gestureHints = "gestureHints"
@@ -26,7 +25,15 @@ enum Prefs {
 }
 
 enum Mode: String, CaseIterable, Identifiable {
-    case trackpad, keyboard, shortcuts
+    case trackpad, keyboard, shortcuts, screen
     var id: Self { self }
     var title: String { rawValue.capitalized }
+    var icon: String {
+        switch self {
+        case .trackpad: "hand.point.up.left"
+        case .keyboard: "keyboard"
+        case .shortcuts: "command"
+        case .screen: "display"
+        }
+    }
 }

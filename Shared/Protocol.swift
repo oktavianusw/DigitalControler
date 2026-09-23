@@ -24,6 +24,9 @@ struct Message: Equatable {
         case text        // dx: one Unicode scalar, typed as-is (layout independent)
         case ping        // dx: sequence number; the Mac echoes it back for the latency readout
         case rightDown, rightUp
+        case screenStart // dx: longest edge in pixels, dy: display index, or -1 for thumbnails of every display
+        case screenStop
+        case moveTo      // dx/dy: 0...1 across the shared screen, so it's independent of resolution
     }
 
     /// Mac actions that aren't plain key presses (system shortcuts, media keys).
@@ -67,6 +70,32 @@ extension Message {
         // 0x10FFFF (largest Unicode scalar) must fit for .text; anything past that is garbage.
         guard dx.isFinite, dy.isFinite, abs(dx) <= 0x10FFFF, abs(dy) <= 0x10FFFF else { return nil }
         self.init(kind: kind, dx: dx, dy: dy)
+    }
+}
+
+/// Mac → iPhone messages vary in size (a screen frame is ~100 KB), so each carries a
+/// 5-byte header: 1 byte kind + little-endian UInt32 payload length.
+enum Downstream: UInt8 {
+    case pong         // payload: the iPhone's 9-byte ping, echoed back
+    case frame        // payload: 1 byte display index, then one JPEG of that display
+    case screenError  // payload: UTF-8 reason the screen can't be shared
+    case displays     // payload: UTF-8 display names, one per line, left to right as arranged on the Mac
+
+    static let headerSize = 5
+    static let maxPayload = 8 << 20 // a frame is ~100 KB; anything near this is garbage
+
+    func packet(_ payload: Data) -> Data {
+        var d = Data([rawValue])
+        withUnsafeBytes(of: UInt32(payload.count).littleEndian) { d.append(contentsOf: $0) }
+        return d + payload
+    }
+
+    /// Kind and payload length from a header, nil if malformed.
+    static func header(_ data: Data) -> (Downstream, Int)? {
+        let b = [UInt8](data)
+        guard b.count == headerSize, let kind = Downstream(rawValue: b[0]) else { return nil }
+        let length = Int(UInt32(b[1]) | UInt32(b[2]) << 8 | UInt32(b[3]) << 16 | UInt32(b[4]) << 24)
+        return length <= maxPayload ? (kind, length) : nil
     }
 }
 
