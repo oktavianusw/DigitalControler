@@ -3,7 +3,11 @@
 Turn your iPhone into a trackpad and keyboard for your Mac, over your local Wi-Fi.
 
 Move the pointer, tap to click, scroll with two fingers, drag, pinch to zoom, swipe with three fingers for
-Mission Control, type on a full Mac keyboard, or fire common shortcuts, all from your phone.
+Mission Control, type on a Mac keyboard, or fire common shortcuts, all from your phone.
+
+<p align="center">
+  <img src="docs/screenshots/trackpad.png" alt="Trackpad screen: the Mac's name and latency, mode switcher, a large touch surface, Left and Right click buttons, and a scroll strip" width="820">
+</p>
 
 ## How it works
 
@@ -43,7 +47,7 @@ reads your fingers                  turns messages into real input events
 Also on the trackpad screen: Left and Right click buttons you can hold (hold Left click with your thumb and
 drag on the pad), a one-finger scroll strip, and a live connection latency readout.
 
-**Keyboard:** a full Mac layout with sticky modifiers (tap ⌘, then C) and caps lock.
+**Keyboard:** the Mac layout with sticky modifiers (tap ⌘, then C) and caps lock.
 
 **Shortcuts:** a "Type to Mac" field that types anything, including emoji, plus one-tap buttons for Copy, Paste,
 Undo, Spotlight, Switch app, Mission Control, volume, and play/pause. It also has a mini trackpad.
@@ -51,6 +55,16 @@ Undo, Spotlight, Switch app, Mission Control, volume, and play/pause. It also ha
 **Settings:** tracking and scroll speed, natural scrolling, tap to click, orientation lock
 (portrait / landscape, works even with rotation lock on), haptics, and toggles for every on-screen extra.
 The app reconnects to your last Mac automatically.
+
+## Screenshots
+
+| Keyboard | Shortcuts |
+|---|---|
+| <img src="docs/screenshots/keyboard.png" alt="Full Mac keyboard layout with sticky modifier keys" width="400"> | <img src="docs/screenshots/shortcuts.png" alt="Type to Mac field, nine shortcut buttons, and a mini trackpad" width="400"> |
+
+| Connect | Settings | Gestures |
+|---|---|---|
+| <img src="docs/screenshots/connect.png" alt="Connect screen listing nearby Macs" width="250"> | <img src="docs/screenshots/settings.png" alt="Settings: open-in mode, orientation, speeds, click options" width="250"> | <img src="docs/screenshots/settings-gestures.png" alt="Settings: on-screen toggles, gesture list, connected Mac" width="250"> |
 
 ## Requirements
 
