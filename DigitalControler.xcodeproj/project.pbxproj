@@ -27,11 +27,25 @@
 		18771A7630641CC7001C1DB0 /* DigitalControler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DigitalControler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		18771A8530641CC9001C1DB0 /* DigitalControlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DigitalControlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		18771A8F30641CC9001C1DB0 /* DigitalControlerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DigitalControlerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		18771B0130641CC9001C1DB0 /* DigitalControlerMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DigitalControlerMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		18771B0B30641CC9001C1DB0 /* Exceptions for "DigitalControler" folder in "DigitalControler" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 18771A7530641CC7001C1DB0 /* DigitalControler */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		18771A7830641CC7001C1DB0 /* DigitalControler */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				18771B0B30641CC9001C1DB0 /* Exceptions for "DigitalControler" folder in "DigitalControler" target */,
+			);
 			path = DigitalControler;
 			sourceTree = "<group>";
 		};
@@ -43,6 +57,16 @@
 		18771A9230641CC9001C1DB0 /* DigitalControlerUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = DigitalControlerUITests;
+			sourceTree = "<group>";
+		};
+		18771B0230641CC9001C1DB0 /* DigitalControlerMac */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DigitalControlerMac;
+			sourceTree = "<group>";
+		};
+		18771B0330641CC9001C1DB0 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -69,6 +93,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		18771B0530641CC9001C1DB0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -78,6 +109,8 @@
 				18771A7830641CC7001C1DB0 /* DigitalControler */,
 				18771A8830641CC9001C1DB0 /* DigitalControlerTests */,
 				18771A9230641CC9001C1DB0 /* DigitalControlerUITests */,
+				18771B0230641CC9001C1DB0 /* DigitalControlerMac */,
+				18771B0330641CC9001C1DB0 /* Shared */,
 				18771A7730641CC7001C1DB0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,6 +121,7 @@
 				18771A7630641CC7001C1DB0 /* DigitalControler.app */,
 				18771A8530641CC9001C1DB0 /* DigitalControlerTests.xctest */,
 				18771A8F30641CC9001C1DB0 /* DigitalControlerUITests.xctest */,
+				18771B0130641CC9001C1DB0 /* DigitalControlerMac.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -109,6 +143,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				18771A7830641CC7001C1DB0 /* DigitalControler */,
+				18771B0330641CC9001C1DB0 /* Shared */,
 			);
 			name = DigitalControler;
 			packageProductDependencies = (
@@ -163,6 +198,29 @@
 			productReference = 18771A8F30641CC9001C1DB0 /* DigitalControlerUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		18771B0730641CC9001C1DB0 /* DigitalControlerMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 18771B0830641CC9001C1DB0 /* Build configuration list for PBXNativeTarget "DigitalControlerMac" */;
+			buildPhases = (
+				18771B0430641CC9001C1DB0 /* Sources */,
+				18771B0530641CC9001C1DB0 /* Frameworks */,
+				18771B0630641CC9001C1DB0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				18771B0230641CC9001C1DB0 /* DigitalControlerMac */,
+				18771B0330641CC9001C1DB0 /* Shared */,
+			);
+			name = DigitalControlerMac;
+			packageProductDependencies = (
+			);
+			productName = DigitalControlerMac;
+			productReference = 18771B0130641CC9001C1DB0 /* DigitalControlerMac.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -184,6 +242,9 @@
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = 18771A7530641CC7001C1DB0;
 					};
+					18771B0730641CC9001C1DB0 = {
+						CreatedOnToolsVersion = 26.6;
+					};
 				};
 			};
 			buildConfigurationList = 18771A7130641CC7001C1DB0 /* Build configuration list for PBXProject "DigitalControler" */;
@@ -203,6 +264,7 @@
 				18771A7530641CC7001C1DB0 /* DigitalControler */,
 				18771A8430641CC9001C1DB0 /* DigitalControlerTests */,
 				18771A8E30641CC9001C1DB0 /* DigitalControlerUITests */,
+				18771B0730641CC9001C1DB0 /* DigitalControlerMac */,
 			);
 		};
 /* End PBXProject section */
@@ -229,6 +291,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		18771B0630641CC9001C1DB0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -247,6 +316,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		18771A8B30641CC9001C1DB0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		18771B0430641CC9001C1DB0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -400,11 +476,13 @@
 				DEVELOPMENT_TEAM = 7RQ9DQUGKZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DigitalControler/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -432,11 +510,13 @@
 				DEVELOPMENT_TEAM = 7RQ9DQUGKZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DigitalControler/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -538,6 +618,62 @@
 			};
 			name = Release;
 		};
+		18771B0930641CC9001C1DB0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7RQ9DQUGKZ;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "DigitalControler listens on the local network so your iPhone can act as this Mac's trackpad.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jua.DigitalControlerMac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		18771B0A30641CC9001C1DB0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7RQ9DQUGKZ;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "DigitalControler listens on the local network so your iPhone can act as this Mac's trackpad.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jua.DigitalControlerMac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -573,6 +709,15 @@
 			buildConfigurations = (
 				18771AA030641CC9001C1DB0 /* Debug */,
 				18771AA130641CC9001C1DB0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		18771B0830641CC9001C1DB0 /* Build configuration list for PBXNativeTarget "DigitalControlerMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				18771B0930641CC9001C1DB0 /* Debug */,
+				18771B0A30641CC9001C1DB0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

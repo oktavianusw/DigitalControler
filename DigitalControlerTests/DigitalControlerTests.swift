@@ -8,31 +8,29 @@
 import XCTest
 @testable import DigitalControler
 
+@MainActor
 final class DigitalControlerTests: XCTestCase {
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
-        // XCTest Documentation
-        // https://developer.apple.com/documentation/xctest
-    }
-
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+    func testMessageRoundTrip() {
+        let m = Message(kind: .move, dx: -3.5, dy: 120.25)
+        XCTAssertEqual(m.data.count, Message.size)
+        XCTAssertEqual(Message(m.data), m)
+        for kind in Message.Kind.allCases {
+            XCTAssertEqual(Message(Message(kind: kind).data)?.kind, kind)
         }
     }
 
+    func testMessageRejectsGarbage() {
+        XCTAssertNil(Message(Data([0, 1, 2])))                                 // wrong size
+        XCTAssertNil(Message(Data([99] + [UInt8](repeating: 0, count: 8))))    // unknown kind
+        var nan = Message(kind: .move).data
+        nan.replaceSubrange(1..<5, with: withUnsafeBytes(of: Float.nan.bitPattern.littleEndian, Array.init))
+        XCTAssertNil(Message(nan))                                             // non-finite delta
+        XCTAssertNil(Message(Message(kind: .scroll, dx: 1e9).data))            // absurd value
+    }
+
+    func testGainGrowsWithSpeedAndIsCapped() {
+        XCTAssertLessThan(TouchpadView.gain(speed: 0), TouchpadView.gain(speed: 800))
+        XCTAssertEqual(TouchpadView.gain(speed: 1500), TouchpadView.gain(speed: 10_000))
+    }
 }
