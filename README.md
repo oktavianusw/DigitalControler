@@ -7,7 +7,7 @@ Mission Control, type on a Mac keyboard, fire common shortcuts, or see your Mac'
 all from your phone.
 
 <p align="center">
-  <img src="docs/screenshots/trackpad.png" alt="Trackpad screen: the Mac's name and latency, mode switcher, a large touch surface, Left and Right click buttons, and a scroll strip" width="820">
+  <img src="docs/screenshots/trackpad.png" alt="Trackpad screen: the Mac's name and latency, mode switcher, a large touch surface, and a scroll strip" width="820">
 </p>
 
 ## How it works
@@ -64,9 +64,13 @@ The app reconnects to your last Mac automatically.
 
 ## Screenshots
 
+| Screen: all displays | Screen: one display |
+|---|---|
+| <img src="docs/screenshots/screen-grid.png" alt="Screen tab showing thumbnails of three Mac displays" width="400"> | <img src="docs/screenshots/screen.png" alt="Screen tab showing one Mac display large, with an All screens button and gesture hints" width="400"> |
+
 | Keyboard | Shortcuts |
 |---|---|
-| <img src="docs/screenshots/keyboard.png" alt="Full Mac keyboard layout with sticky modifier keys" width="400"> | <img src="docs/screenshots/shortcuts.png" alt="Type to Mac field, nine shortcut buttons, and a mini trackpad" width="400"> |
+| <img src="docs/screenshots/keyboard.png" alt="Mac keyboard layout with sticky modifier keys" width="400"> | <img src="docs/screenshots/shortcuts.png" alt="Type to Mac field, nine shortcut buttons, and a mini trackpad" width="400"> |
 
 | Connect | Settings | Gestures |
 |---|---|---|
@@ -116,6 +120,7 @@ DigitalControler/                 iPhone app
   TouchpadView.swift              Multi-touch surface: pointer, taps, scroll, drag, pinch, 3-finger swipes
   RemoteView.swift                Connected screen: Trackpad, Shortcuts and Screen modes, scroll strip
   KeyboardView.swift              Mac keyboard layout
+  ScreenView.swift                The Mac's screen as a touch surface: click, drag, scroll, zoom
   ConnectView.swift               Find and pair with a Mac
   SettingsView.swift, Prefs.swift Settings screen and stored preferences
   Theme.swift                     Monochrome glass styling
@@ -128,6 +133,7 @@ DigitalControlerMac/              Mac menu bar helper
 
 ## Known limitations
 
+- **The Screen tab is snapshots for now.** Up to 5 frames per second as JPEG; H.264 video streaming is planned.
 - **Pinch and three-finger gestures are approximations.** They send keyboard shortcuts, because real trackpad
   gesture events need private macOS APIs.
 - **Keys don't auto-repeat when held.**

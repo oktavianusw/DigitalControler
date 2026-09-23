@@ -45,6 +45,9 @@ struct ScreenSurfaceView: UIViewRepresentable {
             super.init(frame: frame)
             clipsToBounds = true
             isMultipleTouchEnabled = true
+            imageView.layer.cornerRadius = 12
+            imageView.layer.cornerCurve = .continuous
+            imageView.clipsToBounds = true
             addSubview(imageView)
 
             let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
