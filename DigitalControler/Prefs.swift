@@ -22,6 +22,32 @@ enum Prefs {
     static let showLatency = "showLatency"
     static let keyHaptics = "keyHaptics"
     static let miniTrackpad = "miniTrackpad"
+    static let screenQuality = "screenQuality"
+}
+
+/// How big (and how much Wi-Fi and battery) the Screen tab's video is.
+enum ScreenQuality: String, CaseIterable, Identifiable {
+    case saver, balanced, sharp
+    var id: Self { self }
+    var title: String {
+        switch self {
+        case .saver: "Data saver"
+        case .balanced: "Balanced"
+        case .sharp: "Sharp"
+        }
+    }
+    /// Longest edge in pixels. The Mac scales its bitrate to match.
+    var maxEdge: Int {
+        switch self {
+        case .saver: 1024
+        case .balanced: 1600
+        case .sharp: 2400
+        }
+    }
+
+    static var current: ScreenQuality {
+        UserDefaults.standard.string(forKey: Prefs.screenQuality).flatMap(ScreenQuality.init) ?? .balanced
+    }
 }
 
 enum Mode: String, CaseIterable, Identifiable {

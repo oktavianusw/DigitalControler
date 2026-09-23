@@ -16,7 +16,8 @@ struct DigitalControlerMacApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("DigitalControler", systemImage: "hand.point.up.left") {
+        // The icon turns into a display while the iPhone is watching the screen, so it's never a secret.
+        MenuBarExtra("DigitalControler", systemImage: server.sharingScreen ? "display" : "hand.point.up.left") {
             Text("PIN: \(server.pin)")
             Text(server.status)
             if AXIsProcessTrusted() {

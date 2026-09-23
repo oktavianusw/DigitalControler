@@ -8,32 +8,45 @@ import ImageIO
 import ScreenCaptureKit
 import UniformTypeIdentifiers
 
-/// Sends the Mac's screens to the iPhone as JPEG snapshots, only while the iPhone asks for it:
-/// either small thumbnails of every display (for picking one) or one display at full size.
-// ponytail: JPEG stills at ≤5 fps prove the pipeline; H.264 streaming (phase 7) replaces this for 30 fps.
+/// Sends the Mac's screens to the iPhone, only while the iPhone asks for it: small JPEG thumbnails of
+/// every display (for picking one, 2 fps), or one display as H.264 video (up to 30 fps, see `VideoStreamer`).
 @MainActor
 final class ScreenStreamer {
     /// The display being shown large, in global coordinates, for mapping taps back onto it.
     private(set) var displayBounds: CGRect?
     private var task: Task<Void, Never>?
+    private var video: VideoStreamer?
 
     static var hasPermission: Bool { CGPreflightScreenCaptureAccess() }
 
     /// `display` is an index into the displays (left to right), or nil for thumbnails of all of them.
-    /// `send` returns false once the connection is gone. It resolves when the frame has left, which paces
-    /// the loop: a slow network lowers the frame rate instead of piling frames up.
-    func start(maxEdge: Int, display: Int?, send: @escaping (Downstream, Data) async -> Bool) {
+    func start(maxEdge: Int, display: Int?, transmit: @escaping Transmit) {
         stop()
+        // Resolves when the bytes have left, which paces the thumbnail loop: a slow network lowers
+        // the frame rate instead of piling frames up. False once the connection is gone.
+        let send: (Downstream, Data) async -> Bool = { kind, payload in
+            await withCheckedContinuation { done in transmit(kind.packet(payload)) { done.resume(returning: $0) } }
+        }
         task = Task { [weak self] in
             do {
                 let displays = try await Self.displays()
                 let names = displays.map(\.name).joined(separator: "\n")
                 guard await send(.displays, Data(names.utf8)) else { return }
 
-                let shown = display.map { [min(max($0, 0), displays.count - 1)] } ?? Array(displays.indices)
-                self?.displayBounds = display == nil ? nil : displays[shown[0]].bounds
-                let targets = shown.map { i in (index: i, filter: displays[i].filter, config: Self.config(displays[i].bounds, maxEdge)) }
-                let interval = display == nil ? 0.5 : 0.2 // thumbnails at 2 fps, one display at 5 fps
+                if let display {
+                    let i = min(max(display, 0), displays.count - 1)
+                    let config = Self.config(displays[i].bounds, maxEdge)
+                    let video = try VideoStreamer(filter: displays[i].filter, width: config.width, height: config.height,
+                                                  index: i, transmit: transmit)
+                    try await video.start()
+                    guard !Task.isCancelled, let self else { return video.stop() }
+                    self.displayBounds = displays[i].bounds
+                    self.video = video
+                    return
+                }
+
+                let targets = displays.indices.map { i in (index: i, filter: displays[i].filter, config: Self.config(displays[i].bounds, maxEdge)) }
+                let interval = 0.5 // thumbnails at 2 fps
 
                 while !Task.isCancelled {
                     let started = Date()
@@ -59,6 +72,8 @@ final class ScreenStreamer {
     func stop() {
         task?.cancel()
         task = nil
+        video?.stop()
+        video = nil
         displayBounds = nil
     }
 
@@ -95,7 +110,7 @@ final class ScreenStreamer {
     nonisolated private static func jpeg(_ image: CGImage) -> Data? {
         let data = NSMutableData()
         guard let dest = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
-        // ponytail: fixed quality; the Settings quality picker comes in phase 8.
+        // Only thumbnails use JPEG now (the big view is H.264), so one modest quality fits all.
         CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: 0.6] as CFDictionary)
         return CGImageDestinationFinalize(dest) ? data as Data : nil
     }

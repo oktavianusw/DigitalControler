@@ -3,6 +3,7 @@
 //  DigitalControler
 //
 
+import AVFoundation
 import SwiftUI
 import UIKit
 
@@ -10,7 +11,12 @@ import UIKit
 /// tap = click there, two-finger tap = right click, hold then move = drag, two fingers = scroll,
 /// pinch = zoom the picture on the iPhone, one finger while zoomed = move around the picture.
 struct ScreenSurfaceView: UIViewRepresentable {
-    let image: UIImage
+    enum Content {
+        case image(UIImage)             // a still, e.g. the thumbnail while the video starts
+        case video(VideoFeed, CGSize)   // live H.264, and its pixel size
+    }
+
+    let content: Content
     let send: (Message) -> Void
     var scrollSpeed = 1.0
     var naturalScrolling = true
@@ -22,7 +28,10 @@ struct ScreenSurfaceView: UIViewRepresentable {
         surface.send = send
         surface.scrollGain = TouchpadView.scrollGain * scrollSpeed * (naturalScrolling ? 1 : -1)
         surface.haptics = haptics
-        surface.setImage(image)
+        switch content {
+        case .image(let image): surface.show(image: image)
+        case .video(let feed, let size): surface.show(video: feed.layer, size: size)
+        }
     }
 
     final class Surface: UIView, UIGestureRecognizerDelegate {
@@ -30,7 +39,9 @@ struct ScreenSurfaceView: UIViewRepresentable {
         var scrollGain: CGFloat = 1
         var haptics = true
 
-        private let imageView = UIImageView()
+        private let imageView = UIImageView() // also hosts the video layer, so both share rounding and frame
+        private var videoLayer: AVSampleBufferDisplayLayer?
+        private var contentSize = CGSize.zero
         private var zoom: CGFloat = 1
         private var pan = CGPoint.zero      // offset of the zoomed picture from centered
         private var pinching = false        // pinch and two-finger scroll both use two fingers:
@@ -81,23 +92,44 @@ struct ScreenSurfaceView: UIViewRepresentable {
             true // pinch and two-finger scroll run together and settle it between themselves
         }
 
-        func setImage(_ image: UIImage) {
-            let resized = imageView.image?.size != image.size
+        func show(image: UIImage) {
+            videoLayer?.removeFromSuperlayer()
+            videoLayer = nil
             imageView.image = image
-            if resized { setNeedsLayout() }
+            resize(to: image.size)
+        }
+
+        func show(video layer: AVSampleBufferDisplayLayer, size: CGSize) {
+            if videoLayer !== layer {
+                videoLayer?.removeFromSuperlayer()
+                imageView.layer.addSublayer(layer)
+                videoLayer = layer
+            }
+            resize(to: size)
+        }
+
+        private func resize(to size: CGSize) {
+            guard size != contentSize else { return }
+            contentSize = size
+            setNeedsLayout()
         }
 
         override func layoutSubviews() {
             super.layoutSubviews()
             clampPan()
             imageView.frame = displayRect
+            CATransaction.begin()
+            CATransaction.setDisableActions(true) // follow zoom and pan exactly, no implicit animation
+            videoLayer?.frame = imageView.bounds
+            CATransaction.commit()
         }
 
         // MARK: Geometry
 
         /// The picture fitted into the view at 1×.
         private var fitted: CGRect {
-            guard let size = imageView.image?.size, size.width > 0, size.height > 0 else { return bounds }
+            let size = contentSize
+            guard size.width > 0, size.height > 0 else { return bounds }
             let s = min(bounds.width / size.width, bounds.height / size.height)
             let w = size.width * s, h = size.height * s
             return CGRect(x: bounds.midX - w / 2, y: bounds.midY - h / 2, width: w, height: h)

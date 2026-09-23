@@ -23,6 +23,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.showLatency) private var showLatency = true
     @AppStorage(Prefs.keyHaptics) private var keyHaptics = true
     @AppStorage(Prefs.miniTrackpad) private var miniTrackpad = true
+    @AppStorage(Prefs.screenQuality) private var screenQuality = ScreenQuality.balanced
 
     var body: some View {
         ScrollView {
@@ -73,6 +74,9 @@ struct SettingsView: View {
                         toggle("Mini trackpad in Shortcuts", $miniTrackpad, last: true)
                     }
                 }
+                section("Screen", footer: "Sharper uses more Wi-Fi and battery on both devices.") {
+                    PillPicker(options: ScreenQuality.allCases, selection: $screenQuality, title: \.title, height: 44, fillWidth: true)
+                }
                 section("Gestures") {
                     group {
                         gestureRow("Hold, then move", "Drag")
@@ -89,6 +93,7 @@ struct SettingsView: View {
             .frame(maxWidth: 520)
             .frame(maxWidth: .infinity)
         }
+        .onChange(of: screenQuality) { client.resumeScreen() } // apply to a stream that's already running
         .background(Color.black.ignoresSafeArea())
         .presentationBackground(.black)
     }

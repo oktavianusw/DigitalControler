@@ -24,6 +24,9 @@ final class Client {
     private(set) var screenError: String?
     /// The display shown large, nil while picking from thumbnails.
     private(set) var selectedDisplay: Int?
+    /// The selected display's live H.264 video, and its pixel size once the first keyframe arrives.
+    let video = VideoFeed()
+    private(set) var videoSize: CGSize?
     private var sharingScreen = false // kept so a reconnect resumes the stream
     var connecting: Bool { connection != nil && !connected }
     var error: String?
@@ -66,22 +69,35 @@ final class Client {
         connect(to: .hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: servicePort)!), pin: pin)
     }
 
-    // ponytail: fixed sizes; the quality setting comes in phase 8.
     private static let thumbnailEdge = 640
-    private static let fullEdge = 1600
 
     func startScreen() {
         sharingScreen = true
         screenError = nil
         let display = selectedDisplay
         send(Message(kind: .screenStart,
-                     dx: Float(display == nil ? Self.thumbnailEdge : Self.fullEdge),
+                     dx: Float(display == nil ? Self.thumbnailEdge : ScreenQuality.current.maxEdge),
                      dy: Float(display ?? -1)))
+    }
+
+    /// Stops the Mac sending while the app is in the background, without forgetting what was on screen.
+    func pauseScreen() {
+        guard sharingScreen else { return }
+        send(Message(kind: .screenStop))
+    }
+
+    /// Picks up where it left off (after `pauseScreen`, or with a new quality setting).
+    func resumeScreen() {
+        guard sharingScreen else { return }
+        video.reset() // the Mac starts a new stream, beginning with a keyframe
+        startScreen()
     }
 
     /// Show one display large, or nil to go back to thumbnails of all of them.
     func selectDisplay(_ index: Int?) {
         selectedDisplay = index
+        video.reset()
+        videoSize = nil
         screenFrames = screenFrames.filter { $0.key == index } // keep the thumbnail until the sharp frame lands
         startScreen()
     }
@@ -89,6 +105,8 @@ final class Client {
     func stopScreen() {
         sharingScreen = false
         selectedDisplay = nil
+        video.reset()
+        videoSize = nil
         screenFrames = [:]
         send(Message(kind: .screenStop))
     }
@@ -198,14 +216,14 @@ final class Client {
         c.receive(minimumIncompleteLength: Downstream.headerSize, maximumLength: Downstream.headerSize) { [weak self] data, _, isComplete, error in
             MainActor.assumeIsolated {
                 guard let self, error == nil, !isComplete, let data, let header = Downstream.header(data) else { return }
-                guard header.1 > 0 else {
-                    self.received(header.0, Data(), on: c)
+                guard header.length > 0 else {
+                    if let kind = header.kind { self.received(kind, Data(), on: c) }
                     return self.receive(on: c)
                 }
-                c.receive(minimumIncompleteLength: header.1, maximumLength: header.1) { payload, _, isComplete, error in
+                c.receive(minimumIncompleteLength: header.length, maximumLength: header.length) { payload, _, isComplete, error in
                     MainActor.assumeIsolated {
                         guard error == nil, let payload else { return }
-                        self.received(header.0, payload, on: c)
+                        if let kind = header.kind { self.received(kind, payload, on: c) } // unknown kinds: skipped
                         if !isComplete { self.receive(on: c) }
                     }
                 }
@@ -228,6 +246,14 @@ final class Client {
         case .displays:
             displays = String(decoding: payload, as: UTF8.self).split(separator: "\n").map(String.init)
             if displays.count == 1, selectedDisplay == nil { selectDisplay(0) } // nothing to pick from
+        case .videoFormat:
+            guard sharingScreen, let index = payload.first.map(Int.init), index == selectedDisplay,
+                  let sets = ParameterSets.decode(payload.dropFirst()), let size = video.setFormat(sets) else { return }
+            if videoSize != size { videoSize = size }
+            screenError = nil
+        case .videoFrame:
+            guard sharingScreen, let index = payload.first.map(Int.init), index == selectedDisplay else { return }
+            video.enqueue(payload.dropFirst())
         case .screenError:
             screenError = String(decoding: payload, as: UTF8.self)
         }

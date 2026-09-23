@@ -124,11 +124,9 @@ final class Server {
             c.send(content: Downstream.pong.packet(raw), completion: .idempotent) // for the iPhone's latency readout
         case .screenStart:
             sharingScreen = true
-            screen.start(maxEdge: Int(m.dx), display: m.dy < 0 ? nil : Int(m.dy)) { [weak c] kind, payload in
-                await withCheckedContinuation { done in
-                    guard let c else { return done.resume(returning: false) }
-                    c.send(content: kind.packet(payload), completion: .contentProcessed { done.resume(returning: $0 == nil) })
-                }
+            screen.start(maxEdge: Int(m.dx), display: m.dy < 0 ? nil : Int(m.dy)) { [weak c] bytes, done in
+                guard let c else { return done(false) }
+                c.send(content: bytes, completion: .contentProcessed { done($0 == nil) })
             }
         case .screenStop:
             screen.stop()

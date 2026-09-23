@@ -26,7 +26,8 @@ reads your fingers                  turns messages into real input events
   so a wrong PIN fails the handshake and all traffic is encrypted. After 10 wrong PINs the helper stops
   accepting connections until you make a new PIN.
 - **Protocol:** every iPhone → Mac message is 9 bytes (1-byte kind + two Float32 values), sent over TCP with
-  Nagle off. Mac → iPhone messages (latency echoes, screen pictures) carry a 5-byte kind + length header.
+  Nagle off. Mac → iPhone messages (latency echoes, screen video, thumbnails) carry a 5-byte kind + length
+  header; kinds the app doesn't know are skipped, so an older app keeps working with a newer helper.
   The traffic is marked as interactive so Wi-Fi power saving doesn't hold packets back.
 - **Input on the Mac:** the helper posts `CGEvent`s. Scrolls are trackpad-style (continuous pixel deltas with
   scroll and momentum phases), so apps rubber-band and glide like they do with a real trackpad.
@@ -56,7 +57,13 @@ Undo, Spotlight, Switch app, Mission Control, volume, and play/pause. It also ha
 **Screen:** see your Mac's screen on the iPhone and work on it directly. With more than one display, all of them
 show up as a grid of thumbnails; tap one to open it large. On the picture: tap to click that spot, two-finger tap to
 right-click, hold then move to drag, two fingers to scroll, and pinch to zoom the picture (up to 5×) to hit small
-targets. For now it sends JPEG snapshots at up to 5 frames per second. Smooth video streaming is planned.
+targets.
+
+The picture is live H.264 video at up to 30 fps, encoded and decoded by the Mac's and iPhone's video hardware.
+Only changes are sent, so a still screen costs almost nothing, and if Wi-Fi falls behind the Mac skips frames
+instead of letting the picture lag further and further. Choose *Data saver*, *Balanced* or *Sharp* in Settings.
+Streaming pauses while the app is in the background or the phone is locked, and the helper's menu bar icon turns
+into a display while your screen is being shared.
 
 **Settings:** tracking and scroll speed, natural scrolling, tap to click, orientation lock
 (portrait / landscape, works even with rotation lock on), haptics, and toggles for every on-screen extra.
@@ -121,6 +128,7 @@ DigitalControler/                 iPhone app
   RemoteView.swift                Connected screen: Trackpad, Shortcuts and Screen modes, scroll strip
   KeyboardView.swift              Mac keyboard layout
   ScreenView.swift                The Mac's screen as a touch surface: click, drag, scroll, zoom
+  VideoFeed.swift                 Plays the Mac's H.264 stream (hardware decoder)
   ConnectView.swift               Find and pair with a Mac
   SettingsView.swift, Prefs.swift Settings screen and stored preferences
   Theme.swift                     Monochrome glass styling
@@ -128,12 +136,12 @@ DigitalControler/                 iPhone app
 DigitalControlerMac/              Mac menu bar helper
   Server.swift                    Bonjour listener, PIN pairing, lockout, ping echo
   Injector.swift                  Turns messages into mouse, scroll, and keyboard events
-  ScreenStreamer.swift            Captures the displays (ScreenCaptureKit) and sends them as JPEG
+  ScreenStreamer.swift            Screen sharing: display list and JPEG thumbnails of every display
+  VideoStreamer.swift             One display as live H.264 (ScreenCaptureKit + hardware encoder)
 ```
 
 ## Known limitations
 
-- **The Screen tab is snapshots for now.** Up to 5 frames per second as JPEG; H.264 video streaming is planned.
 - **Pinch and three-finger gestures are approximations.** They send keyboard shortcuts, because real trackpad
   gesture events need private macOS APIs.
 - **Keys don't auto-repeat when held.**

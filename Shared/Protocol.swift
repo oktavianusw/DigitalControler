@@ -80,6 +80,9 @@ enum Downstream: UInt8 {
     case frame        // payload: 1 byte display index, then one JPEG of that display
     case screenError  // payload: UTF-8 reason the screen can't be shared
     case displays     // payload: UTF-8 display names, one per line, left to right as arranged on the Mac
+    case videoFormat  // payload: 1 byte display index, 1 byte count, then per H.264 parameter set (SPS, PPS):
+                      //          UInt16 little-endian length + bytes. Sent before every keyframe.
+    case videoFrame   // payload: 1 byte display index, then one H.264 frame in AVCC form (4-byte length-prefixed NAL units)
 
     static let headerSize = 5
     static let maxPayload = 8 << 20 // a frame is ~100 KB; anything near this is garbage
@@ -90,12 +93,13 @@ enum Downstream: UInt8 {
         return d + payload
     }
 
-    /// Kind and payload length from a header, nil if malformed.
-    static func header(_ data: Data) -> (Downstream, Int)? {
+    /// Kind and payload length from a header, nil if malformed. The kind is nil for messages from a newer
+    /// Mac helper this app doesn't know yet: skip their payload rather than lose track of the stream.
+    static func header(_ data: Data) -> (kind: Downstream?, length: Int)? {
         let b = [UInt8](data)
-        guard b.count == headerSize, let kind = Downstream(rawValue: b[0]) else { return nil }
+        guard b.count == headerSize else { return nil }
         let length = Int(UInt32(b[1]) | UInt32(b[2]) << 8 | UInt32(b[3]) << 16 | UInt32(b[4]) << 24)
-        return length <= maxPayload ? (kind, length) : nil
+        return length <= maxPayload ? (Downstream(rawValue: b[0]), length) : nil
     }
 }
 
@@ -119,5 +123,32 @@ extension NWParameters {
         // aren't held back and batched by Wi-Fi power saving (a big source of pointer stutter).
         params.serviceClass = .interactiveVoice
         return params
+    }
+}
+
+/// H.264 parameter sets (SPS, PPS) ↔ `Downstream.videoFormat` payload body (after the display index).
+enum ParameterSets {
+    static func encode(_ sets: [Data]) -> Data {
+        var d = Data([UInt8(sets.count)])
+        for s in sets {
+            withUnsafeBytes(of: UInt16(s.count).littleEndian) { d.append(contentsOf: $0) }
+            d.append(s)
+        }
+        return d
+    }
+
+    static func decode(_ data: Data) -> [Data]? {
+        let b = [UInt8](data)
+        guard let count = b.first else { return nil }
+        var sets: [Data] = [], i = 1
+        for _ in 0..<count {
+            guard i + 2 <= b.count else { return nil }
+            let n = Int(b[i]) | Int(b[i + 1]) << 8
+            i += 2
+            guard i + n <= b.count else { return nil }
+            sets.append(Data(b[i..<i + n]))
+            i += n
+        }
+        return sets
     }
 }

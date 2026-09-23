@@ -224,6 +224,7 @@ private struct ScreenPane: View {
     @AppStorage(Prefs.scrollSpeed) private var scrollSpeed = 1.0
     @AppStorage(Prefs.naturalScrolling) private var naturalScrolling = true
     @AppStorage(Prefs.gestureHints) private var gestureHints = true
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -247,6 +248,10 @@ private struct ScreenPane: View {
         .glassPanel()
         .onAppear { client.startScreen() }
         .onDisappear { client.stopScreen() }
+        // Nobody's watching in the background or with the phone locked: don't make the Mac stream.
+        .onChange(of: scenePhase) { _, phase in
+            phase == .active ? client.resumeScreen() : client.pauseScreen()
+        }
     }
 
     private var grid: some View {
@@ -278,10 +283,16 @@ private struct ScreenPane: View {
         .scrollBounceBehavior(.basedOnSize)
     }
 
+    /// Live video once it's flowing; until then the display's thumbnail from the grid, if there is one.
+    private func content(for index: Int) -> ScreenSurfaceView.Content? {
+        if let size = client.videoSize { return .video(client.video, size) }
+        return client.screenFrames[index].map { .image($0) }
+    }
+
     private func display(_ index: Int) -> some View {
         ZStack(alignment: .topLeading) {
-            if let frame = client.screenFrames[index] {
-                ScreenSurfaceView(image: frame, send: client.send, scrollSpeed: scrollSpeed,
+            if let content = content(for: index) {
+                ScreenSurfaceView(content: content, send: client.send, scrollSpeed: scrollSpeed,
                                   naturalScrolling: naturalScrolling, haptics: haptics)
                     .id(index) // fresh zoom for each display
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

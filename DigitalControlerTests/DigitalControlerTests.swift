@@ -32,11 +32,21 @@ final class DigitalControlerTests: XCTestCase {
     func testDownstreamFraming() {
         let packet = Downstream.frame.packet(Data([1, 2, 3]))
         let header = Downstream.header(packet.prefix(Downstream.headerSize))
-        XCTAssertEqual(header?.0, .frame)
-        XCTAssertEqual(header?.1, 3)
+        XCTAssertEqual(header?.kind, .frame)
+        XCTAssertEqual(header?.length, 3)
         XCTAssertEqual(packet.dropFirst(Downstream.headerSize), Data([1, 2, 3]))
-        XCTAssertNil(Downstream.header(Data([9, 0, 0, 0, 0])))            // unknown kind
+        let future = Downstream.header(Data([99, 2, 0, 0, 0]))              // kind from a newer Mac helper
+        XCTAssertNotNil(future)
+        XCTAssertNil(future?.kind)                                          // unknown, so skipped...
+        XCTAssertEqual(future?.length, 2)                                   // ...by its length
         XCTAssertNil(Downstream.header(Data([1, 255, 255, 255, 255])))    // absurd length
+    }
+
+    func testParameterSetsRoundTrip() {
+        let sets = [Data([0x67, 1, 2, 3]), Data([0x68, 9])]
+        XCTAssertEqual(ParameterSets.decode(ParameterSets.encode(sets)), sets)
+        XCTAssertNil(ParameterSets.decode(Data([2, 5, 0, 1])))   // says 5 bytes, has 1
+        XCTAssertNil(ParameterSets.decode(Data()))               // empty
     }
 
     func testGainGrowsWithSpeedAndIsCapped() {
