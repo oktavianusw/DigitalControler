@@ -18,7 +18,7 @@ struct DigitalControlerMacApp: App {
 
     var body: some Scene {
         // The icon turns into a display while the iPhone is watching the screen, so it's never a secret.
-        MenuBarExtra("DigitalControler", systemImage: server.sharingScreen ? "display" : "hand.point.up.left") {
+        MenuBarExtra("Touche", systemImage: server.sharingScreen ? "display" : "hand.point.up.left") {
             MenuContent(server: server)
         }
 
@@ -78,7 +78,7 @@ private struct PairView: View {
                 .padding(12)
                 .background(.white, in: .rect(cornerRadius: 12))
                 .accessibilityLabel("Pairing QR code for \(code.name)")
-            Text("Open DigitalControler on your iPhone and tap **Scan QR code**, or point the iPhone's Camera at it.")
+            Text("Open Touche on your iPhone and tap **Scan QR code**, or point the iPhone's Camera at it.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .frame(width: 280)

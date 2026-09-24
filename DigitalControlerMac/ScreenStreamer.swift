@@ -63,7 +63,7 @@ final class ScreenStreamer {
             } catch {
                 let reason = Self.hasPermission
                     ? "Couldn't capture the Mac's screen: \(error.localizedDescription)"
-                    : "Allow Screen Recording for DigitalControlerMac on your Mac, then reopen it."
+                    : "Allow Screen Recording for Touche on your Mac, then reopen it."
                 _ = await send(.screenError, Data(reason.utf8))
             }
         }

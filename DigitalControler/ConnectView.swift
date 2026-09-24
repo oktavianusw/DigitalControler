@@ -52,7 +52,7 @@ struct ConnectView: View {
                 }
                 .buttonStyle(.glassCapsule)
                 .padding(.top, 24)
-                Text("New Mac, or a network that hides it? On the Mac, open the DigitalControler menu → Pair iPhone…")
+                Text("New Mac, or a network that hides it? On the Mac, open the Touche menu → Pair iPhone…")
                     .font(.system(size: 13))
                     .foregroundStyle(.white.opacity(0.55))
                     .frame(maxWidth: .infinity)
@@ -113,7 +113,7 @@ private struct ScanSheet: View {
                 }
                 .buttonStyle(.glassCapsule)
             }
-            Text("On your Mac, click the DigitalControler icon in the menu bar → Pair iPhone…, then point this camera at the code.")
+            Text("On your Mac, click the Touche icon in the menu bar → Pair iPhone…, then point this camera at the code.")
                 .font(.system(size: 14))
                 .foregroundStyle(.white.opacity(0.6))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -122,7 +122,7 @@ private struct ScanSheet: View {
                 if DataScannerViewController.isSupported {
                     QRScanner(found: found)
                 } else {
-                    Text("This device can't scan here. Point the iPhone's Camera app at the code instead; it opens DigitalControler.")
+                    Text("This device can't scan here. Point the iPhone's Camera app at the code instead; it opens Touche.")
                         .font(.system(size: 14))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.white.opacity(0.7))

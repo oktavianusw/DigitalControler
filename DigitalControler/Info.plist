@@ -18,8 +18,8 @@
 		</dict>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>DigitalControler uses the camera only to scan the pairing QR code shown on your Mac.</string>
+	<string>Touche uses the camera only to scan the pairing QR code shown on your Mac.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>DigitalControler finds your Mac on the local network so your iPhone can act as its trackpad.</string>
+	<string>Touche finds your Mac on the local network so your iPhone can act as its trackpad.</string>
 </dict>
 </plist>

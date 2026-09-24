@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/icon.png" alt="DigitalControler app icon: a glowing white dot inside soft concentric rings" width="128">
+  <img src="docs/icon.png" alt="Touche app icon: a glowing white dot inside soft concentric rings" width="128">
 </p>
 
-# DigitalControler
+# Touche
 
 Turn your iPhone into a trackpad and keyboard for your Mac, over your local Wi-Fi.
 
@@ -17,7 +17,7 @@ all from your phone.
 ## How it works
 
 An iPhone can't pretend to be a Bluetooth trackpad (iOS doesn't let apps act as a Bluetooth input device),
-so DigitalControler comes in two parts:
+so Touche comes in two parts:
 
 ```
 iPhone app ──(local Wi-Fi, TLS)──▶ Mac helper (menu bar) ──(CGEvent)──▶ pointer, clicks, scroll, keys
@@ -98,12 +98,12 @@ The app reconnects to your last Mac automatically.
 
 ## Setup
 
-1. **Clone and open** `DigitalControler.xcodeproj`. In *Signing & Capabilities*, set your own team for the
-   `DigitalControler` and `DigitalControlerMac` targets.
+1. **Clone and open** `DigitalControler.xcodeproj` (the project keeps its original code name). In *Signing &
+   Capabilities*, set your own team for the `DigitalControler` (iPhone) and `DigitalControlerMac` (Mac) targets.
 2. **Build the Mac helper:** run the `DigitalControlerMac` scheme. A hand icon appears in the menu bar.
-   Tip: copy the built app to `~/Applications` and open it from there. macOS ties the Accessibility permission
+   Tip: copy the built `Touche.app` to `~/Applications` and open it from there. macOS ties the Accessibility permission
    to the app's location, and Xcode's build folder moves around.
-3. **Allow Accessibility:** System Settings → Privacy & Security → Accessibility → turn on **DigitalControlerMac**.
+3. **Allow Accessibility:** System Settings → Privacy & Security → Accessibility → turn on **Touche**.
    Then quit the helper from its menu and open it again. macOS only lets an app post input events after a relaunch.
    For the Screen tab, also allow **Screen Recording** (same place, *Screen & System Audio Recording*) and relaunch again.
 4. **Run the iPhone app:** run the `DigitalControler` scheme on your iPhone and allow Local Network access.
@@ -120,7 +120,7 @@ The app reconnects to your last Mac automatically.
   tccutil reset Accessibility com.jua.DigitalControlerMac
   ```
 - **The Mac doesn't show up on the iPhone.** Check that both devices are on the same Wi-Fi and that Local Network
-  access is on for DigitalControler (iPhone Settings → Privacy & Security → Local Network). Scanning the QR code
+  access is on for Touche (iPhone Settings → Privacy & Security → Local Network). Scanning the QR code
   still works: it connects by IP.
 - **"Couldn't connect" after it used to work.** Pairing was probably reset on the Mac. Scan the new QR code
   (menu bar → *Pair iPhone…*).
