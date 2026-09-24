@@ -110,6 +110,9 @@ The app reconnects to your last Mac automatically.
 5. **Pair:** on the Mac, click the menu bar icon → *Pair iPhone…*. In the app, tap *Scan QR code* (or point
    the iPhone's Camera at it). From then on the app connects to that Mac by itself.
 
+The helper adds itself to *Login Items* the first time it runs, so it's already there after a restart and the
+iPhone finds the Mac without you opening anything. Turn it off with *Open at Login* in the helper's menu.
+
 ## Troubleshooting
 
 - **The pointer doesn't move.** Open the helper's menu. If it says *Accessibility: NOT allowed*, grant it

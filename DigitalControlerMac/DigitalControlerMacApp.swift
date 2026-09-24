@@ -6,6 +6,8 @@
 import SwiftUI
 import ApplicationServices
 import CoreImage.CIFilterBuiltins
+import ServiceManagement
+import os
 
 @main
 struct DigitalControlerMacApp: App {
@@ -14,6 +16,7 @@ struct DigitalControlerMacApp: App {
     init() {
         // Shows the system "allow Accessibility" prompt on first launch.
         AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+        LoginItem.enableOnFirstLaunch()
     }
 
     var body: some Scene {
@@ -30,9 +33,32 @@ struct DigitalControlerMacApp: App {
     }
 }
 
+/// Starts Touche when you log in, so the iPhone finds the Mac after a restart without opening anything.
+enum LoginItem {
+    static var isEnabled: Bool { SMAppService.mainApp.status == .enabled }
+    static var needsApproval: Bool { SMAppService.mainApp.status == .requiresApproval }
+
+    static func set(_ on: Bool) {
+        do {
+            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+        } catch {
+            log.error("Open at Login \(on ? "on" : "off") failed: \(error.localizedDescription)")
+        }
+        log.notice("Open at Login status: \(SMAppService.mainApp.status.rawValue)")
+    }
+
+    /// On by default, once. After that it's the user's call: turning it off in the menu sticks.
+    static func enableOnFirstLaunch() {
+        guard !UserDefaults.standard.bool(forKey: "loginItemSetUp") else { return }
+        UserDefaults.standard.set(true, forKey: "loginItemSetUp")
+        set(true)
+    }
+}
+
 private struct MenuContent: View {
     let server: Server
     @Environment(\.openWindow) private var openWindow
+    @State private var openAtLogin = LoginItem.isEnabled
 
     var body: some View {
         Button("Pair iPhone…") {
@@ -58,6 +84,11 @@ private struct MenuContent: View {
             }
         }
         Divider()
+        Toggle("Open at Login", isOn: $openAtLogin)
+            .onChange(of: openAtLogin) { _, on in LoginItem.set(on) }
+        if LoginItem.needsApproval {
+            Button("Allow in Login Items…") { SMAppService.openSystemSettingsLoginItems() }
+        }
         Button("Quit") { NSApp.terminate(nil) }.keyboardShortcut("q")
     }
 }
