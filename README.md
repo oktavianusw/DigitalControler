@@ -4,6 +4,9 @@
 
 # Touche
 
+[![CI](https://github.com/oktavianusw/Touche/actions/workflows/ci.yml/badge.svg)](https://github.com/oktavianusw/Touche/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Turn your iPhone into a trackpad and keyboard for your Mac, over your local Wi-Fi.
 
 Move the pointer, tap to click, scroll with two fingers, drag, pinch to zoom, swipe with three fingers for
@@ -31,6 +34,7 @@ reads your fingers                  turns messages into real input events
   (menu bar → *Pair iPhone…*). Scan it once with the app, or with the iPhone's Camera. The secret becomes a TLS
   pre-shared key, so all traffic is encrypted and a phone without the current secret fails the handshake. TLS
   session resumption is off, so every connection proves the secret, and *Reset pairing* shuts out every phone.
+  The iPhone keeps the secret in its Keychain, on that device only.
 - **Protocol:** every iPhone → Mac message is 9 bytes (1-byte kind + two Float32 values), sent over TCP with
   Nagle off. Mac → iPhone messages (latency echoes, screen video, thumbnails) carry a 5-byte kind + length
   header; kinds the app doesn't know are skipped, so an older app keeps working with a newer helper.
@@ -141,7 +145,7 @@ DigitalControler/                 iPhone app
   ScreenView.swift                The Mac's screen as a touch surface: click, drag, scroll, zoom
   VideoFeed.swift                 Plays the Mac's H.264 stream (hardware decoder)
   ConnectView.swift               Find and pair with a Mac
-  SettingsView.swift, Prefs.swift Settings screen and stored preferences
+  SettingsView.swift, Prefs.swift Settings screen, stored preferences, Keychain for pairing secrets
   Theme.swift                     Monochrome glass styling
 
 DigitalControlerMac/              Mac menu bar helper
@@ -159,3 +163,15 @@ DigitalControlerMac/              Mac menu bar helper
 - **Not on the Mac App Store.** The helper runs outside the App Sandbox because it posts input events.
 - **Anyone who can see the pairing QR code can pair.** It's only shown when you open *Pair iPhone…*; close it
   when you're done, and use *Reset pairing* if someone else scanned it.
+
+## Running the tests
+
+```bash
+xcodebuild test -project DigitalControler.xcodeproj -scheme DigitalControler -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+```
+
+The unit tests cover the wire format, framing, pairing codes, and Keychain storage. CI runs them on every push.
+
+## License
+
+[MIT](LICENSE)

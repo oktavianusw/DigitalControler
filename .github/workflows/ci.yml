@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-26
+    env:
+      # Ad-hoc signing: no Apple team needed, but the tests still get Keychain access.
+      SIGN: CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test iPhone app
+        run: |
+          sim=$(xcrun simctl list -j devices available | jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')
+          xcodebuild test -project DigitalControler.xcodeproj -scheme DigitalControler \
+            -destination "id=$sim" $SIGN
+      - name: Build Mac helper
+        run: |
+          xcodebuild build -project DigitalControler.xcodeproj -scheme DigitalControlerMac \
+            -destination 'platform=macOS' $SIGN
