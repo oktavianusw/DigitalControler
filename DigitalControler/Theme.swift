@@ -85,6 +85,18 @@ struct MonoToggleStyle: ToggleStyle {
     }
 }
 
+extension View {
+    /// Black background, white text, dark mode: what every screen sits in (ContentView and previews).
+    func appChrome() -> some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            self
+        }
+        .foregroundStyle(.white)
+        .preferredColorScheme(.dark)
+    }
+}
+
 /// Segmented pill: selected option is a white capsule with black text.
 struct PillPicker<T: Hashable & Identifiable>: View {
     let options: [T]
@@ -130,4 +142,18 @@ struct Caption: View {
     var body: some View {
         Text(text).font(.system(size: 13)).foregroundStyle(.white.opacity(0.55))
     }
+}
+
+#Preview("Components") {
+    @Previewable @State var mode = Mode.trackpad
+    VStack(alignment: .leading, spacing: 16) {
+        Caption("Caption")
+        PillPicker(options: Mode.allCases, selection: $mode, title: \.title)
+        PillPicker(options: Mode.allCases, selection: $mode, title: \.title, icon: \.icon)
+        Button("Glass capsule") {}.padding(.horizontal, 16).frame(height: 40).buttonStyle(.glassCapsule)
+        Button("Primary") {}.buttonStyle(PrimaryButtonStyle())
+        Text("Glass panel").frame(maxWidth: .infinity, minHeight: 120).glassPanel()
+    }
+    .padding(20)
+    .appChrome()
 }

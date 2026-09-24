@@ -9,16 +9,14 @@ struct ContentView: View {
     @State private var client = Client()
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        Group {
             if client.connected || client.reconnecting {
                 RemoteView(client: client)
             } else {
                 ConnectView(client: client)
             }
         }
-        .foregroundStyle(.white)
-        .preferredColorScheme(.dark)
+        .appChrome()
         .task { client.startBrowsing() }
         // The pairing QR code is a digitalcontroler:// link, so the iPhone's Camera app can pair too.
         .onOpenURL { url in

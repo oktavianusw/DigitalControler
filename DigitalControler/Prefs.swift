@@ -25,6 +25,7 @@ enum Prefs {
     static let miniTrackpad = "miniTrackpad"
     static let screenQuality = "screenQuality"
     static let lastMac = "lastMac"
+    static let barAtBottom = "barAtBottom"
 }
 
 /// Each Mac's pairing secret, kept in the Keychain (this device only) under the Mac's Bonjour name.
@@ -86,6 +87,8 @@ enum Mode: String, CaseIterable, Identifiable {
     case trackpad, keyboard, shortcuts, screen
     var id: Self { self }
     var title: String { rawValue.capitalized }
+    /// Keyboard and Shortcuts are buttons edge to edge: a floating exit button would cover one.
+    var canFullScreen: Bool { self == .trackpad || self == .screen }
     var icon: String {
         switch self {
         case .trackpad: "hand.point.up.left"

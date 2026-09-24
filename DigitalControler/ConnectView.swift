@@ -173,3 +173,11 @@ private struct QRScanner: UIViewControllerRepresentable {
         }
     }
 }
+
+#Preview("Connect") {
+    ConnectView(client: Client()).appChrome()
+}
+
+#Preview("Scan sheet") {
+    ScanSheet { _ in }.appChrome()
+}

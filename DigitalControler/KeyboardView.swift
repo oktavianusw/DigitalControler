@@ -121,3 +121,7 @@ private struct KeyStyle: ButtonStyle {
             .contentShape(shape)
     }
 }
+
+#Preview("Keyboard", traits: .landscapeLeft) {
+    KeyboardView { _ in }.padding(16).appChrome()
+}

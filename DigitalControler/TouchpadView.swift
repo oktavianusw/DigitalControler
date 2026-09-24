@@ -295,3 +295,7 @@ struct TouchpadView: UIViewRepresentable {
         }
     }
 }
+
+#Preview("Touchpad") {
+    TouchpadView(send: { _ in }).glassPanel().padding(16).appChrome()
+}

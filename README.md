@@ -57,7 +57,8 @@ reads your fingers                  turns messages into real input events
 | Three fingers up / down | Mission Control / App windows |
 | Three fingers left / right | Switch desktop (Space) |
 
-Also on the trackpad screen: a one-finger scroll strip and a live connection latency readout.
+Also on the trackpad screen: a one-finger scroll strip and a live connection latency readout. Tap ⤢ for full
+screen: the bar goes away and the trackpad takes the whole phone (the Screen tab has it too).
 
 **Keyboard:** the Mac layout with sticky modifiers (tap ⌘, then C) and caps lock.
 
@@ -75,7 +76,7 @@ instead of letting the picture lag further and further. Choose *Data saver*, *Ba
 Streaming pauses while the app is in the background or the phone is locked, and the helper's menu bar icon turns
 into a display while your screen is being shared.
 
-**Settings:** tracking and scroll speed, natural scrolling, tap to click, orientation lock
+**Settings:** the bar at the bottom or top, tracking and scroll speed, natural scrolling, tap to click, orientation lock
 (portrait / landscape, works even with rotation lock on), haptics, and toggles for every on-screen extra.
 The app reconnects to your last Mac automatically.
 
@@ -171,6 +172,9 @@ xcodebuild test -project DigitalControler.xcodeproj -scheme DigitalControler -de
 ```
 
 The unit tests cover the wire format, framing, pairing codes, and Keychain storage. CI runs them on every push.
+
+Every view has an Xcode preview (Editor → Canvas). The Screen and Remote previews use `Client.preview()`, a stand-in
+that looks connected to a Mac sharing three displays, so you can work on those screens without a Mac.
 
 ## License
 

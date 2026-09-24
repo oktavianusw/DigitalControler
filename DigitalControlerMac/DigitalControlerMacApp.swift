@@ -26,7 +26,7 @@ struct DigitalControlerMacApp: App {
         }
 
         Window("Pair iPhone", id: "pair") {
-            PairView(server: server)
+            PairView(code: server.pairingCode, reset: server.resetPairing)
         }
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(.suppressed) // only when asked for, from the menu
@@ -95,11 +95,11 @@ private struct MenuContent: View {
 
 /// The QR code an iPhone scans to pair. Anyone who can see it can pair, so it's only shown on request.
 private struct PairView: View {
-    let server: Server
+    let code: PairingCode
+    let reset: () -> Void
     @State private var confirmingReset = false
 
     var body: some View {
-        let code = server.pairingCode
         VStack(spacing: 16) {
             Text("Scan to pair your iPhone").font(.title2.bold())
             Image(nsImage: Self.qr(code.url.absoluteString))
@@ -115,7 +115,7 @@ private struct PairView: View {
                 .frame(width: 280)
             Button("Reset pairing…", role: .destructive) { confirmingReset = true }
                 .confirmationDialog("Reset pairing?", isPresented: $confirmingReset) {
-                    Button("Reset", role: .destructive) { server.resetPairing() }
+                    Button("Reset", role: .destructive, action: reset)
                 } message: {
                     Text("Every iPhone paired with this Mac will need to scan the new code.")
                 }
@@ -133,4 +133,8 @@ private struct PairView: View {
         image.addRepresentation(rep)
         return image
     }
+}
+
+#Preview("Pair") {
+    PairView(code: PairingCode(name: "MacBook Pro", secret: PairingCode.newSecret(), host: "192.168.1.9"), reset: {})
 }

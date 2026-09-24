@@ -21,6 +21,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.gestureHints) private var gestureHints = true
     @AppStorage(Prefs.scrollStrip) private var scrollStrip = true
     @AppStorage(Prefs.showLatency) private var showLatency = true
+    @AppStorage(Prefs.barAtBottom) private var barAtBottom = true
     @AppStorage(Prefs.keyHaptics) private var keyHaptics = true
     @AppStorage(Prefs.miniTrackpad) private var miniTrackpad = true
     @AppStorage(Prefs.screenQuality) private var screenQuality = ScreenQuality.balanced
@@ -62,6 +63,7 @@ struct SettingsView: View {
                 }
                 section("On screen", footer: "Turn these off for a plain, empty pad.") {
                     group {
+                        toggle("Bar at the bottom", $barAtBottom)
                         toggle("Finger dots", $fingerDots)
                         toggle("Gesture hints", $gestureHints)
                         toggle("Scroll strip", $scrollStrip)
@@ -181,4 +183,8 @@ struct SettingsView: View {
             }
         }
     }
+}
+
+#Preview("Settings") {
+    SettingsView(client: Client()).appChrome()
 }

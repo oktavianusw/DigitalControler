@@ -6,31 +6,43 @@
 import SwiftUI
 import UIKit
 
-/// The connected screen: status pill, Trackpad / Keyboard / Shortcuts switcher, settings.
+/// The connected screen: a bar (status pill, mode switcher, full screen, settings) above or below the current mode.
 struct RemoteView: View {
     let client: Client
     @State private var mode = Mode(rawValue: UserDefaults.standard.string(forKey: Prefs.openIn) ?? "") ?? .trackpad
     @State private var showSettings = false
     @AppStorage(Prefs.orientation) private var orientation = PadOrientation.auto
     @AppStorage(Prefs.showLatency) private var showLatency = true
+    @AppStorage(Prefs.barAtBottom) private var barAtBottom = true
+    @State private var fullScreen = false
     @State private var islandEdge: Edge?
 
     var body: some View {
         VStack(spacing: 10) {
-            topBar
-            switch mode {
-            case .trackpad: TrackpadPane(send: client.send)
-            case .keyboard: KeyboardView(send: client.send)
-            case .shortcuts: ShortcutsPane(send: client.send)
-            case .screen: ScreenPane(client: client)
+            if !fullScreen, !barAtBottom { bar }
+            Group {
+                switch mode {
+                case .trackpad: TrackpadPane(send: client.send, exitFullScreen: exitAction, exitAtTop: !barAtBottom)
+                case .keyboard: KeyboardView(send: client.send)
+                case .shortcuts: ShortcutsPane(send: client.send)
+                case .screen: ScreenPane(client: client)
+                }
             }
+            // Where the bar's buttons were, so the way out is where you'd reach for it.
+            // The trackpad places its own, beside the scroll strip rather than on it.
+            .overlay(alignment: barAtBottom ? .bottomTrailing : .topTrailing) {
+                if fullScreen, mode != .trackpad {
+                    ExitFullScreenButton(action: exitFullScreen).padding(8)
+                }
+            }
+            if !fullScreen, barAtBottom { bar }
         }
         // Landscape safe area pads both sides for the Dynamic Island, but it's only on one side:
         // go edge to edge and keep clear of the island alone.
         .padding(.leading, islandEdge == .leading ? 52 : 16)
         .padding(.trailing, islandEdge == .trailing ? 52 : 16)
         .padding(.vertical, 14)
-        .ignoresSafeArea(.container, edges: .horizontal)
+        .ignoresSafeArea(.container, edges: fullScreen ? .all : .horizontal)
         .onGeometryChange(for: CGSize.self) { $0.size } action: { _ in islandEdge = Self.islandEdge() }
         .defersSystemGestures(on: .all) // edge swipes go to the pad first, not Control Center / Home
         .persistentSystemOverlays(.hidden)
@@ -49,6 +61,15 @@ struct RemoteView: View {
         }
     }
 
+    private func exitFullScreen() {
+        withAnimation(.easeOut(duration: 0.2)) { fullScreen = false }
+    }
+
+    private var exitAction: (() -> Void)? {
+        guard fullScreen else { return nil }
+        return { exitFullScreen() }
+    }
+
     /// Which side the Dynamic Island / notch sits on in landscape, nil in portrait.
     private static func islandEdge() -> Edge? {
         let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
@@ -60,14 +81,14 @@ struct RemoteView: View {
     }
 
     /// Full labels when there's room (landscape); icons and a bare status dot when there isn't (portrait).
-    private var topBar: some View {
+    private var bar: some View {
         ViewThatFits(in: .horizontal) {
-            topBar(compact: false)
-            topBar(compact: true)
+            bar(compact: false)
+            bar(compact: true)
         }
     }
 
-    private func topBar(compact: Bool) -> some View {
+    private func bar(compact: Bool) -> some View {
         HStack(spacing: 12) {
             HStack(spacing: 8) {
                 Circle().fill(.white).frame(width: 7, height: 7).shadow(color: .white.opacity(0.8), radius: 4)
@@ -84,19 +105,31 @@ struct RemoteView: View {
             .glass(in: Capsule())
             .accessibilityElement(children: .combine)
             .accessibilityLabel(client.connected ? "Connected to \(client.macName)" : "Reconnecting")
-            .frame(maxWidth: compact ? nil : .infinity, alignment: .leading)
             .fixedSize()
+            // Both sides stretch equally, so the mode switcher sits in the middle.
+            .frame(maxWidth: compact ? nil : .infinity, alignment: .leading)
 
             PillPicker(options: Mode.allCases, selection: $mode, title: \.title, icon: compact ? \.icon : nil)
                 .fixedSize()
 
-            Button { showSettings = true } label: {
-                Image(systemName: "slider.horizontal.2.square")
-                    .font(.system(size: 17))
-                    .frame(width: 40, height: 40)
+            HStack(spacing: 8) {
+                if mode.canFullScreen {
+                    Button { withAnimation(.easeOut(duration: 0.2)) { fullScreen = true } } label: {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 15, weight: .semibold))
+                            .frame(width: 40, height: 40)
+                    }
+                    .buttonStyle(GlassButtonStyle(shape: Circle()))
+                    .accessibilityLabel("Full screen")
+                }
+                Button { showSettings = true } label: {
+                    Image(systemName: "slider.horizontal.2.square")
+                        .font(.system(size: 17))
+                        .frame(width: 40, height: 40)
+                }
+                .buttonStyle(GlassButtonStyle(shape: Circle()))
+                .accessibilityLabel("Settings")
             }
-            .buttonStyle(GlassButtonStyle(shape: Circle()))
-            .accessibilityLabel("Settings")
             .frame(maxWidth: compact ? nil : .infinity, alignment: .trailing)
         }
     }
@@ -125,8 +158,27 @@ private struct Pad: View {
     }
 }
 
+/// Leaves full screen. Floats over the mode, so keep it clear of anything you'd touch.
+private struct ExitFullScreenButton: View {
+    let action: () -> Void
+    var size: CGFloat = 40
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "arrow.down.right.and.arrow.up.left")
+                .font(.system(size: 14, weight: .semibold))
+                .frame(width: size, height: size)
+        }
+        .buttonStyle(GlassButtonStyle(shape: Circle()))
+        .accessibilityLabel("Exit full screen")
+    }
+}
+
 private struct TrackpadPane: View {
     let send: (Message) -> Void
+    /// Set while in full screen: the way out, under (or over) the scroll strip, or in the pad's corner without one.
+    var exitFullScreen: (() -> Void)?
+    var exitAtTop = false
     @State private var gesture: String?
     @AppStorage(Prefs.gestureHints) private var gestureHints = true
     @AppStorage(Prefs.scrollStrip) private var scrollStrip = true
@@ -146,7 +198,12 @@ private struct TrackpadPane: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .glassPanel()
-                .overlay(alignment: .topTrailing) {
+                .overlay(alignment: exitAtTop ? .topTrailing : .bottomTrailing) {
+                    if !scrollStrip, let exitFullScreen {
+                        ExitFullScreenButton(action: exitFullScreen).padding(8)
+                    }
+                }
+                .overlay(alignment: .topLeading) {
                     if gestureHints, let gesture {
                         Text(gesture)
                             .font(.system(size: 12))
@@ -154,14 +211,19 @@ private struct TrackpadPane: View {
                             .frame(height: 26)
                             .glass(in: Capsule())
                             .padding(.top, 12)
-                            .padding(.trailing, 14)
+                            .padding(.leading, 14)
                             .transition(.opacity)
                             .allowsHitTesting(false)
                     }
                 }
             }
             if scrollStrip {
-                ScrollStrip(send: send).frame(width: 48)
+                VStack(spacing: 10) {
+                    if exitAtTop, let exitFullScreen { ExitFullScreenButton(action: exitFullScreen, size: 48) }
+                    ScrollStrip(send: send)
+                    if !exitAtTop, let exitFullScreen { ExitFullScreenButton(action: exitFullScreen, size: 48) }
+                }
+                .frame(width: 48)
             }
         }
     }
@@ -430,4 +492,32 @@ private struct TypeToMacField: View {
             send(Message(kind: .text, dx: Float(scalar.value)))
         }
     }
+}
+
+#Preview("Remote") {
+    RemoteView(client: .preview()).appChrome()
+}
+
+#Preview("Trackpad") {
+    TrackpadPane { _ in }.padding(16).appChrome()
+}
+
+#Preview("Trackpad, full screen") {
+    TrackpadPane(send: { _ in }, exitFullScreen: {}).padding(16).appChrome()
+}
+
+#Preview("Shortcuts", traits: .landscapeLeft) {
+    ShortcutsPane { _ in }.padding(16).appChrome()
+}
+
+#Preview("Screen, all displays", traits: .landscapeLeft) {
+    ScreenPane(client: .preview()).padding(16).appChrome()
+}
+
+#Preview("Screen, one display", traits: .landscapeLeft) {
+    ScreenPane(client: .preview(selected: 0)).padding(16).appChrome()
+}
+
+#Preview("Screen, waiting") {
+    ScreenPane(client: Client()).padding(16).appChrome()
 }

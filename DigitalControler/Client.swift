@@ -285,3 +285,36 @@ extension NWEndpoint {
         return debugDescription
     }
 }
+
+#if DEBUG
+extension Client {
+    /// Looks connected to a Mac that's sharing its screens, for previews. Nothing goes over the network.
+    static func preview(displays: [String] = ["Built-in Retina Display", "LG UltraFine", "Sidecar"],
+                        selected: Int? = nil) -> Client {
+        let c = Client()
+        c.connected = true
+        c.macName = "MacBook Pro"
+        c.latencyMs = 8
+        c.displays = displays
+        c.selectedDisplay = selected
+        for i in displays.indices { c.screenFrames[i] = fakeScreen(hue: 0.55 + Double(i) * 0.12) }
+        return c
+    }
+
+    /// A made-up desktop: wallpaper, menu bar, two windows.
+    private static func fakeScreen(hue: Double) -> UIImage {
+        let size = CGSize(width: 1440, height: 900)
+        return UIGraphicsImageRenderer(size: size).image { ctx in
+            UIColor(hue: hue, saturation: 0.5, brightness: 0.45, alpha: 1).setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+            UIColor(white: 0.1, alpha: 0.8).setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: size.width, height: 34))
+            for (i, frame) in [CGRect(x: 140, y: 140, width: 760, height: 520),
+                               CGRect(x: 620, y: 300, width: 680, height: 480)].enumerated() {
+                UIColor(white: i == 0 ? 0.92 : 0.18, alpha: 1).setFill()
+                UIBezierPath(roundedRect: frame, cornerRadius: 18).fill()
+            }
+        }
+    }
+}
+#endif

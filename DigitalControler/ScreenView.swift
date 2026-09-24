@@ -256,3 +256,10 @@ struct ScreenSurfaceView: UIViewRepresentable {
         }
     }
 }
+
+#Preview("Screen surface") {
+    ScreenSurfaceView(content: .image(UIImage(systemName: "macbook")!), send: { _ in })
+        .glassPanel()
+        .padding(16)
+        .appChrome()
+}
