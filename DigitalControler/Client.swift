@@ -31,6 +31,7 @@ final class Client {
     var connecting: Bool { connection != nil && !connected }
     var error: String?
     private var browser: NWBrowser?
+    private var offline = false // a preview: never touches the network
     private var connection: NWConnection?
     /// Off once the user taps Disconnect or an automatic attempt fails, so we never fight the user.
     private var autoReconnect = true
@@ -40,7 +41,7 @@ final class Client {
     private var pingSentAt = Date.distantPast
 
     func startBrowsing() {
-        guard browser == nil else { return }
+        guard browser == nil, !offline else { return }
         // Peer-to-peer too, like the connection itself: finds the Mac over Apple's direct Wi-Fi link (AWDL)
         // when the router doesn't pass Bonjour, or the two aren't on the same network.
         let params = NWParameters.tcp
@@ -294,31 +295,73 @@ extension NWEndpoint {
 
 #if DEBUG
 extension Client {
-    /// Looks connected to a Mac that's sharing its screens, for previews. Nothing goes over the network.
-    static func preview(displays: [String] = ["Built-in Retina Display", "LG UltraFine", "Sidecar"],
+    /// Looks connected to a Mac that's sharing its screens, for previews and README screenshots.
+    /// Nothing goes over the network.
+    static func preview(macName: String = "MacBook Pro",
+                        displays: [String] = ["Built-in Retina Display", "DELL U2720Q", "LG UltraFine"],
                         selected: Int? = nil) -> Client {
         let c = Client()
+        c.offline = true
         c.connected = true
-        c.macName = "MacBook Pro"
-        c.latencyMs = 8
+        c.macName = macName
+        c.latencyMs = 3
         c.displays = displays
         c.selectedDisplay = selected
-        for i in displays.indices { c.screenFrames[i] = fakeScreen(hue: 0.55 + Double(i) * 0.12) }
+        for i in displays.indices { c.screenFrames[i] = fakeDesktop(i) }
         return c
     }
 
-    /// A made-up desktop: wallpaper, menu bar, two windows.
-    private static func fakeScreen(hue: Double) -> UIImage {
+    /// Launched with `-demo` (and optionally `-demo <display>` to open one): the app shows `preview`,
+    /// for README screenshots without a real Mac's screens in them.
+    static var demo: Client? {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: "-demo") else { return nil }
+        return .preview(macName: "Mac Studio", selected: args.indices.contains(i + 1) ? Int(args[i + 1]) : nil)
+    }
+
+    /// A made-up desktop: gradient wallpaper, menu bar, and a window or two with lines for text.
+    private static func fakeDesktop(_ index: Int) -> UIImage {
+        let looks: [(colors: [UIColor], windows: [(String, CGRect)])] = [
+            ([.systemPurple, .systemPink], [("Notes", CGRect(x: 110, y: 170, width: 700, height: 620)),
+                                             ("Safari", CGRect(x: 640, y: 130, width: 660, height: 540))]),
+            ([.systemTeal, .systemBlue], [("Xcode", CGRect(x: 150, y: 110, width: 1140, height: 560))]),
+            ([.systemOrange, .systemPink], [("Music", CGRect(x: 120, y: 150, width: 580, height: 560)),
+                                            ("Messages", CGRect(x: 760, y: 150, width: 580, height: 560))]),
+        ]
+        let look = looks[index % looks.count]
         let size = CGSize(width: 1440, height: 900)
         return UIGraphicsImageRenderer(size: size).image { ctx in
-            UIColor(hue: hue, saturation: 0.5, brightness: 0.45, alpha: 1).setFill()
-            ctx.fill(CGRect(origin: .zero, size: size))
-            UIColor(white: 0.1, alpha: 0.8).setFill()
-            ctx.fill(CGRect(x: 0, y: 0, width: size.width, height: 34))
-            for (i, frame) in [CGRect(x: 140, y: 140, width: 760, height: 520),
-                               CGRect(x: 620, y: 300, width: 680, height: 480)].enumerated() {
-                UIColor(white: i == 0 ? 0.92 : 0.18, alpha: 1).setFill()
-                UIBezierPath(roundedRect: frame, cornerRadius: 18).fill()
+            let cg = ctx.cgContext
+            let gradient = CGGradient(colorsSpace: nil, colors: look.colors.map(\.cgColor) as CFArray, locations: nil)!
+            cg.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: size.width, y: size.height), options: [])
+            UIColor(white: 0, alpha: 0.25).setFill()
+            cg.fill(CGRect(x: 0, y: 0, width: size.width, height: 30))
+            let menu: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 15, weight: .medium),
+                                                       .foregroundColor: UIColor.white]
+            ("Finder     File     Edit     View     Go     Window" as NSString).draw(at: CGPoint(x: 24, y: 6), withAttributes: menu)
+            ("9:41" as NSString).draw(at: CGPoint(x: size.width - 60, y: 6), withAttributes: menu)
+            for (title, frame) in look.windows {
+                let window = UIBezierPath(roundedRect: frame, cornerRadius: 14)
+                cg.saveGState()
+                cg.setShadow(offset: CGSize(width: 0, height: 12), blur: 40, color: UIColor(white: 0, alpha: 0.4).cgColor)
+                UIColor(white: 0.13, alpha: 1).setFill()
+                window.fill()
+                cg.restoreGState()
+                for (i, color) in [UIColor.systemRed, .systemYellow, .systemGreen].enumerated() {
+                    color.setFill()
+                    UIBezierPath(ovalIn: CGRect(x: frame.minX + 18 + CGFloat(i) * 22, y: frame.minY + 16, width: 13, height: 13)).fill()
+                }
+                (title as NSString).draw(at: CGPoint(x: frame.minX + 92, y: frame.minY + 12), withAttributes: [
+                    .font: UIFont.systemFont(ofSize: 14, weight: .semibold), .foregroundColor: UIColor(white: 0.8, alpha: 1)])
+                UIColor(white: 1, alpha: 0.12).setFill()
+                var y = frame.minY + 64
+                var line = 0
+                while y < frame.maxY - 30 {
+                    let width = (frame.width - 60) * [0.9, 0.7, 0.8, 0.55, 0.85][line % 5]
+                    cg.fill(CGRect(x: frame.minX + 30, y: y, width: width, height: 8))
+                    y += 26
+                    line += 1
+                }
             }
         }
     }

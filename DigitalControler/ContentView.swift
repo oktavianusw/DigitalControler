@@ -6,7 +6,11 @@
 import SwiftUI
 
 struct ContentView: View {
+    #if DEBUG
+    @State private var client = Client.demo ?? Client()
+    #else
     @State private var client = Client()
+    #endif
 
     var body: some View {
         Group {

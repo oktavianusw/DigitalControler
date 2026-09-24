@@ -14,7 +14,7 @@ Mission Control, type on a Mac keyboard, fire common shortcuts, or see your Mac'
 all from your phone.
 
 <p align="center">
-  <img src="docs/screenshots/trackpad.png" alt="Trackpad screen: the Mac's name and latency, mode switcher, a large touch surface, and a scroll strip" width="820">
+  <img src="docs/screenshots/trackpad.png" alt="Trackpad screen: a large touch surface and a scroll strip, with a bar below holding the Mac's name and latency, the mode switcher, full screen and settings" width="820">
 </p>
 
 ## How it works
@@ -94,9 +94,13 @@ The app reconnects to your last Mac automatically.
 |---|---|
 | <img src="docs/screenshots/keyboard.png" alt="Mac keyboard layout with sticky modifier keys" width="400"> | <img src="docs/screenshots/shortcuts.png" alt="Type to Mac field, nine shortcut buttons, and a mini trackpad" width="400"> |
 
+| Trackpad: full screen |
+|---|
+| <img src="docs/screenshots/trackpad-fullscreen.png" alt="Trackpad in full screen: no bar, the touch surface fills the phone, with an exit button under the scroll strip" width="400"> |
+
 | Connect | Settings | Gestures |
 |---|---|---|
-| <img src="docs/screenshots/connect.png" alt="Connect screen listing nearby Macs" width="250"> | <img src="docs/screenshots/settings.png" alt="Settings: open-in mode, orientation, speeds, click options" width="250"> | <img src="docs/screenshots/settings-gestures.png" alt="Settings: on-screen toggles, gesture list, connected Mac" width="250"> |
+| <img src="docs/screenshots/connect.png" alt="Connect screen listing nearby Macs" width="250"> | <img src="docs/screenshots/settings.png" alt="Settings: open-in mode, orientation, speeds, click options, bar at the bottom" width="250"> | <img src="docs/screenshots/settings-gestures.png" alt="Settings: on-screen toggles, gesture list, connected Mac" width="250"> |
 
 ## Requirements
 
@@ -186,6 +190,10 @@ move: iPhone time, arrival, play time):
 ```bash
 /usr/bin/log stream --level debug --predicate 'subsystem == "com.jua.DigitalControlerMac" AND category == "pacer"'
 ```
+
+To retake the README screenshots, run a Debug build in the Simulator with the `-demo` launch argument
+(`-demo 0` opens the first display in the Screen tab). The app then looks connected to a made-up Mac with made-up
+desktops, so no real screen ends up in a picture.
 
 Every view has an Xcode preview (Editor → Canvas). The Screen and Remote previews use `Client.preview()`, a stand-in
 that looks connected to a Mac sharing three displays, so you can work on those screens without a Mac.
