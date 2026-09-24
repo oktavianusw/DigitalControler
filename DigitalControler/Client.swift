@@ -117,7 +117,7 @@ final class Client {
         send(Message(kind: .screenStop))
     }
 
-    static var lastMac: String? { UserDefaults.standard.string(forKey: "lastMac") }
+    static var lastMac: String? { UserDefaults.standard.string(forKey: Prefs.lastMac) }
 
     func disconnect() {
         autoReconnect = false
@@ -131,16 +131,16 @@ final class Client {
 
     /// The pairing secret from this Mac's QR code, if it was ever scanned.
     static func savedSecret(for endpoint: NWEndpoint) -> String? {
-        UserDefaults.standard.string(forKey: "secret." + endpoint.name)
+        PairingSecrets.get(for: endpoint.name)
     }
 
     // MARK: Private
 
     private func autoConnect() {
         guard autoReconnect, connection == nil,
-              let name = UserDefaults.standard.string(forKey: "lastMac"),
+              let name = Self.lastMac,
               let mac = macs.first(where: { $0.endpoint.name == name })?.endpoint,
-              let secret = UserDefaults.standard.string(forKey: "secret." + name) else { return }
+              let secret = PairingSecrets.get(for: name) else { return }
         // Dropped again right after reconnecting: likely another device took over the Mac. Don't fight it.
         guard Date().timeIntervalSince(lastAutoConnect) > 10 else {
             autoReconnect = false
@@ -178,9 +178,9 @@ final class Client {
             connected = true
             reconnecting = false
             macName = endpoint.name
-            UserDefaults.standard.set(secret, forKey: "secret." + endpoint.name)
-            if let pairingName { UserDefaults.standard.set(secret, forKey: "secret." + pairingName) }
-            UserDefaults.standard.set(endpoint.name, forKey: "lastMac")
+            PairingSecrets.set(secret, for: endpoint.name)
+            if let pairingName { PairingSecrets.set(secret, for: pairingName) }
+            UserDefaults.standard.set(endpoint.name, forKey: Prefs.lastMac)
             receive(on: c)
             if sharingScreen { startScreen() } // reconnected mid-share
             ping()

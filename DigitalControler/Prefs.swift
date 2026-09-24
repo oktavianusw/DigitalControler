@@ -2,10 +2,11 @@
 //  Prefs.swift
 //  DigitalControler
 //
-//  UserDefaults keys for Settings, shared by every screen's @AppStorage.
+//  UserDefaults keys for Settings, shared by every screen's @AppStorage, and the Keychain for pairing secrets.
 //
 
 import Foundation
+import Security
 
 enum Prefs {
     static let openIn = "openIn"
@@ -23,6 +24,37 @@ enum Prefs {
     static let keyHaptics = "keyHaptics"
     static let miniTrackpad = "miniTrackpad"
     static let screenQuality = "screenQuality"
+    static let lastMac = "lastMac"
+}
+
+/// Each Mac's pairing secret, kept in the Keychain (this device only) under the Mac's Bonjour name.
+enum PairingSecrets {
+    private static func query(_ mac: String) -> [CFString: Any] {
+        [kSecClass: kSecClassGenericPassword, kSecAttrService: "pairing", kSecAttrAccount: mac]
+    }
+
+    static func get(for mac: String) -> String? {
+        var q = query(mac)
+        q[kSecReturnData] = true
+        var result: CFTypeRef?
+        if SecItemCopyMatching(q as CFDictionary, &result) == errSecSuccess, let data = result as? Data {
+            return String(decoding: data, as: UTF8.self)
+        }
+        // Older builds kept it in UserDefaults: move it over.
+        guard let old = UserDefaults.standard.string(forKey: "secret." + mac) else { return nil }
+        set(old, for: mac)
+        return old
+    }
+
+    static func set(_ secret: String, for mac: String) {
+        SecItemDelete(query(mac) as CFDictionary)
+        var q = query(mac)
+        q[kSecValueData] = Data(secret.utf8)
+        q[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        if SecItemAdd(q as CFDictionary, nil) == errSecSuccess {
+            UserDefaults.standard.removeObject(forKey: "secret." + mac)
+        }
+    }
 }
 
 /// How big (and how much Wi-Fi and battery) the Screen tab's video is.

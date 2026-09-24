@@ -2,8 +2,6 @@
 //  DigitalControlerTests.swift
 //  DigitalControlerTests
 //
-//  Created by Jua on 23/09/26.
-//
 
 import XCTest
 @testable import DigitalControler
@@ -57,6 +55,17 @@ final class DigitalControlerTests: XCTestCase {
         XCTAssertNil(PairingCode(url: URL(string: "https://pair?name=Mac&secret=\(code.secret)")!))  // wrong scheme
         XCTAssertNil(PairingCode(url: URL(string: "digitalcontroler://pair?name=Mac&secret=123456")!)) // a PIN is too short
         XCTAssertNil(PairingCode(url: URL(string: "digitalcontroler://pair?secret=\(code.secret)")!))  // no name
+    }
+
+    func testPairingSecretsRoundTrip() {
+        let mac = "Test Mac \(UUID())"
+        XCTAssertNil(PairingSecrets.get(for: mac))
+        PairingSecrets.set("first", for: mac)
+        PairingSecrets.set("second", for: mac)   // replaces, doesn't duplicate
+        XCTAssertEqual(PairingSecrets.get(for: mac), "second")
+        UserDefaults.standard.set("legacy", forKey: "secret." + mac + "2")
+        XCTAssertEqual(PairingSecrets.get(for: mac + "2"), "legacy")               // migrated from UserDefaults...
+        XCTAssertNil(UserDefaults.standard.string(forKey: "secret." + mac + "2")) // ...and removed there
     }
 
     func testGainGrowsWithSpeedAndIsCapped() {
