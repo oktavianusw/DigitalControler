@@ -14,7 +14,8 @@ let log = Logger(subsystem: "com.jua.DigitalControlerMac", category: "server")
 /// Advertises this Mac over Bonjour and feeds messages from one paired iPhone into `Injector`.
 @Observable
 final class Server {
-    private(set) var pin = UserDefaults.standard.string(forKey: "pin") ?? Server.randomPin()
+    // ponytail: secret in UserDefaults like the old PIN; move to the Keychain if other local apps are a concern.
+    private(set) var secret = UserDefaults.standard.string(forKey: "secret") ?? PairingCode.newSecret()
     private(set) var status = "Starting…"
     private var listener: NWListener?
     private var connection: NWConnection?
@@ -24,24 +25,43 @@ final class Server {
 
     init() { start() }
 
-    func newPin() {
-        pin = Self.randomPin()
+    /// What the pairing QR code shows. The name is the Bonjour name the iPhone looks for.
+    var pairingCode: PairingCode {
+        PairingCode(name: Host.current().localizedName ?? "Mac", secret: secret, host: Self.localIPv4)
+    }
+
+    /// New secret: every paired iPhone has to scan the QR code again.
+    func resetPairing() {
+        secret = PairingCode.newSecret()
         start()
     }
 
-    private static func randomPin() -> String {
-        String(format: "%06d", Int.random(in: 0..<1_000_000)) // SystemRandomNumberGenerator is crypto-secure
+    /// The Mac's Wi-Fi/Ethernet address, for iPhones on networks that block Bonjour.
+    private static var localIPv4: String? {
+        var list: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&list) == 0, let first = list else { return nil }
+        defer { freeifaddrs(list) }
+        for ifa in sequence(first: first, next: { $0.pointee.ifa_next }) {
+            let flags = Int32(ifa.pointee.ifa_flags)
+            guard let addr = ifa.pointee.ifa_addr, addr.pointee.sa_family == UInt8(AF_INET),
+                  flags & IFF_UP != 0, flags & IFF_LOOPBACK == 0,
+                  String(cString: ifa.pointee.ifa_name).hasPrefix("en") else { continue }
+            var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+            guard getnameinfo(addr, socklen_t(addr.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 else { continue }
+            return String(cString: host)
+        }
+        return nil
     }
 
     private func start(fixedPort: Bool = true) {
-        UserDefaults.standard.set(pin, forKey: "pin")
+        UserDefaults.standard.set(secret, forKey: "secret")
         listener?.cancel()
         connection?.cancel()
         connection = nil
         endSession()
         failedAttempts = 0
         do {
-            let params = NWParameters.paired(pin: pin)
+            let params = NWParameters.paired(secret: secret)
             params.allowLocalEndpointReuse = true
             let l = fixedPort ? try NWListener(using: params, on: NWEndpoint.Port(rawValue: servicePort)!) : try NWListener(using: params)
             l.service = NWListener.Service(name: Host.current().localizedName, type: serviceType)
@@ -91,7 +111,7 @@ final class Server {
                 status = "Waiting for iPhone…"
                 endSession()
             } else {
-                handshakeFailed() // never got ready: wrong PIN
+                handshakeFailed() // never got ready: wrong secret (e.g. paired before a reset)
             }
         case .cancelled where connection === c:
             connection = nil
@@ -108,13 +128,14 @@ final class Server {
         sharingScreen = false
     }
 
-    /// Stops online PIN guessing: after 10 wrong PINs, stop listening until the user makes a new PIN.
+    /// Stops a misbehaving client hammering the listener: after 10 failed handshakes, stop listening
+    /// until the user resets pairing. (Guessing a 256-bit secret is hopeless anyway.)
     private func handshakeFailed() {
         failedAttempts += 1
         guard failedAttempts >= 10 else { return }
         listener?.cancel()
         listener = nil
-        status = "Locked: too many wrong PINs. Click New PIN."
+        status = "Locked: too many failed connections. Reset pairing to reopen."
     }
 
     private func handle(_ m: Message, raw: Data, from c: NWConnection) {

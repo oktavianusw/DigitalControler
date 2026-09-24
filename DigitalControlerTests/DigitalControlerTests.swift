@@ -49,6 +49,16 @@ final class DigitalControlerTests: XCTestCase {
         XCTAssertNil(ParameterSets.decode(Data()))               // empty
     }
 
+    func testPairingCodeRoundTrip() {
+        let code = PairingCode(name: "Jua's MacBook Pro", secret: PairingCode.newSecret(), host: "192.168.1.9")
+        XCTAssertEqual(PairingCode(url: code.url), code)
+        XCTAssertEqual(code.secret.count, 43)                                                  // 256 bits, base64url
+        XCTAssertNotEqual(PairingCode.newSecret(), PairingCode.newSecret())
+        XCTAssertNil(PairingCode(url: URL(string: "https://pair?name=Mac&secret=\(code.secret)")!))  // wrong scheme
+        XCTAssertNil(PairingCode(url: URL(string: "digitalcontroler://pair?name=Mac&secret=123456")!)) // a PIN is too short
+        XCTAssertNil(PairingCode(url: URL(string: "digitalcontroler://pair?secret=\(code.secret)")!))  // no name
+    }
+
     func testGainGrowsWithSpeedAndIsCapped() {
         XCTAssertLessThan(TouchpadView.gain(speed: 0), TouchpadView.gain(speed: 800))
         XCTAssertEqual(TouchpadView.gain(speed: 1500), TouchpadView.gain(speed: 10_000))

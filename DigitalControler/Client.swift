@@ -57,16 +57,22 @@ final class Client {
         browser = b
     }
 
-    func connect(to endpoint: NWEndpoint, pin: String) {
+    func connect(to endpoint: NWEndpoint, secret: String, pairingName: String? = nil) {
         autoReconnect = true
-        open(endpoint, pin: pin, auto: false)
+        open(endpoint, secret: secret, auto: false, pairingName: pairingName)
     }
 
-    /// For networks where Bonjour is blocked: the Mac listens on a fixed port.
-    func connect(host: String, pin: String) {
-        let host = host.trimmingCharacters(in: .whitespaces)
-        guard !host.isEmpty else { return }
-        connect(to: .hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: servicePort)!), pin: pin)
+    /// From a scanned QR code: connect by the Mac's Bonjour name, or by IP where Bonjour is blocked.
+    /// The secret is only remembered once it actually works, so a stale code can't replace a good one.
+    func pair(with code: PairingCode) {
+        if let mac = macs.first(where: { $0.endpoint.name == code.name })?.endpoint {
+            connect(to: mac, secret: code.secret, pairingName: code.name)
+        } else if let host = code.host {
+            connect(to: .hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: servicePort)!),
+                    secret: code.secret, pairingName: code.name)
+        } else {
+            error = "Can't find \(code.name) on this Wi-Fi. Make sure both are on the same network."
+        }
     }
 
     private static let thumbnailEdge = 640
@@ -123,8 +129,9 @@ final class Client {
         connection?.send(content: m.data, completion: .idempotent)
     }
 
-    static func savedPin(for endpoint: NWEndpoint) -> String {
-        UserDefaults.standard.string(forKey: "pin." + endpoint.name) ?? ""
+    /// The pairing secret from this Mac's QR code, if it was ever scanned.
+    static func savedSecret(for endpoint: NWEndpoint) -> String? {
+        UserDefaults.standard.string(forKey: "secret." + endpoint.name)
     }
 
     // MARK: Private
@@ -133,7 +140,7 @@ final class Client {
         guard autoReconnect, connection == nil,
               let name = UserDefaults.standard.string(forKey: "lastMac"),
               let mac = macs.first(where: { $0.endpoint.name == name })?.endpoint,
-              let pin = UserDefaults.standard.string(forKey: "pin." + name) else { return }
+              let secret = UserDefaults.standard.string(forKey: "secret." + name) else { return }
         // Dropped again right after reconnecting: likely another device took over the Mac. Don't fight it.
         guard Date().timeIntervalSince(lastAutoConnect) > 10 else {
             autoReconnect = false
@@ -141,20 +148,21 @@ final class Client {
             return
         }
         lastAutoConnect = Date()
-        open(mac, pin: pin, auto: true)
+        open(mac, secret: secret, auto: true)
     }
 
-    private func open(_ endpoint: NWEndpoint, pin: String, auto: Bool) {
+    /// `pairingName`: the Mac's Bonjour name from a QR code, so a connection made by IP is remembered under it too.
+    private func open(_ endpoint: NWEndpoint, secret: String, auto: Bool, pairingName: String? = nil) {
         close()
-        let c = NWConnection(to: endpoint, using: .paired(pin: pin))
+        let c = NWConnection(to: endpoint, using: .paired(secret: secret))
         c.stateUpdateHandler = { [weak self, weak c] state in
             MainActor.assumeIsolated {
-                if let c { self?.connection(c, to: endpoint, pin: pin, auto: auto, changedTo: state) }
+                if let c { self?.connection(c, to: endpoint, secret: secret, auto: auto, pairingName: pairingName, changedTo: state) }
             }
         }
         connection = c
         c.start(queue: .main)
-        // A wrong PIN makes Network.framework retry other addresses forever instead of failing, so give up ourselves.
+        // A wrong secret makes Network.framework retry other addresses forever instead of failing, so give up ourselves.
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
             guard let self, c === connection, !connected else { return }
             close()
@@ -162,14 +170,16 @@ final class Client {
         }
     }
 
-    private func connection(_ c: NWConnection, to endpoint: NWEndpoint, pin: String, auto: Bool, changedTo state: NWConnection.State) {
+    private func connection(_ c: NWConnection, to endpoint: NWEndpoint, secret: String, auto: Bool, pairingName: String?,
+                            changedTo state: NWConnection.State) {
         guard c === connection else { return } // stale connection we already replaced
         switch state {
         case .ready:
             connected = true
             reconnecting = false
             macName = endpoint.name
-            UserDefaults.standard.set(pin, forKey: "pin." + endpoint.name)
+            UserDefaults.standard.set(secret, forKey: "secret." + endpoint.name)
+            if let pairingName { UserDefaults.standard.set(secret, forKey: "secret." + pairingName) }
             UserDefaults.standard.set(endpoint.name, forKey: "lastMac")
             receive(on: c)
             if sharingScreen { startScreen() } // reconnected mid-share
@@ -199,9 +209,9 @@ final class Client {
         reconnecting = false
         if auto {
             autoReconnect = false
-            error = "Couldn't reconnect to \(name). Tap it to try again."
+            error = "Couldn't reconnect to \(name). If pairing was reset on the Mac, scan its QR code again (menu bar → Pair iPhone…)."
         } else {
-            error = "Couldn't connect. Check the PIN in your Mac's menu bar."
+            error = "Couldn't connect. If pairing was reset on the Mac, scan its QR code again (menu bar → Pair iPhone…)."
         }
     }
 

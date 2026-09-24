@@ -21,10 +21,12 @@ reads your fingers                  turns messages into real input events
 ```
 
 - **Discovery:** the Mac helper announces itself with Bonjour (`_digitalctl._tcp`), so the iPhone finds it
-  with no IP typing. If Bonjour is blocked on your network, you can connect by IP (the helper listens on port `51515`).
-- **Pairing and encryption:** the helper shows a 6-digit PIN in the menu bar. The PIN becomes a TLS pre-shared key,
-  so a wrong PIN fails the handshake and all traffic is encrypted. After 10 wrong PINs the helper stops
-  accepting connections until you make a new PIN.
+  with no IP typing. The pairing QR code also carries the Mac's IP (the helper listens on port `51515`), for
+  networks that block Bonjour.
+- **Pairing and encryption:** the helper makes a random 256-bit secret and shows it as a QR code
+  (menu bar → *Pair iPhone…*). Scan it once with the app, or with the iPhone's Camera. The secret becomes a TLS
+  pre-shared key, so all traffic is encrypted and a phone without the current secret fails the handshake. TLS
+  session resumption is off, so every connection proves the secret, and *Reset pairing* shuts out every phone.
 - **Protocol:** every iPhone → Mac message is 9 bytes (1-byte kind + two Float32 values), sent over TCP with
   Nagle off. Mac → iPhone messages (latency echoes, screen video, thumbnails) carry a 5-byte kind + length
   header; kinds the app doesn't know are skipped, so an older app keeps working with a newer helper.
@@ -94,14 +96,15 @@ The app reconnects to your last Mac automatically.
 
 1. **Clone and open** `DigitalControler.xcodeproj`. In *Signing & Capabilities*, set your own team for the
    `DigitalControler` and `DigitalControlerMac` targets.
-2. **Build the Mac helper:** run the `DigitalControlerMac` scheme. A hand icon appears in the menu bar with the PIN.
+2. **Build the Mac helper:** run the `DigitalControlerMac` scheme. A hand icon appears in the menu bar.
    Tip: copy the built app to `~/Applications` and open it from there. macOS ties the Accessibility permission
    to the app's location, and Xcode's build folder moves around.
 3. **Allow Accessibility:** System Settings → Privacy & Security → Accessibility → turn on **DigitalControlerMac**.
    Then quit the helper from its menu and open it again. macOS only lets an app post input events after a relaunch.
    For the Screen tab, also allow **Screen Recording** (same place, *Screen & System Audio Recording*) and relaunch again.
 4. **Run the iPhone app:** run the `DigitalControler` scheme on your iPhone and allow Local Network access.
-5. **Pair:** tap your Mac, enter the PIN from the menu bar, and you're in.
+5. **Pair:** on the Mac, click the menu bar icon → *Pair iPhone…*. In the app, tap *Scan QR code* (or point
+   the iPhone's Camera at it). From then on the app connects to that Mac by itself.
 
 ## Troubleshooting
 
@@ -113,9 +116,10 @@ The app reconnects to your last Mac automatically.
   tccutil reset Accessibility com.jua.DigitalControlerMac
   ```
 - **The Mac doesn't show up on the iPhone.** Check that both devices are on the same Wi-Fi and that Local Network
-  access is on for DigitalControler (iPhone Settings → Privacy & Security → Local Network). Or use
-  *Enter IP manually*.
-- **"Couldn't connect. Check the PIN".** The PIN changes when you click *New PIN*. Use the one shown in the menu bar.
+  access is on for DigitalControler (iPhone Settings → Privacy & Security → Local Network). Scanning the QR code
+  still works: it connects by IP.
+- **"Couldn't connect" after it used to work.** Pairing was probably reset on the Mac. Scan the new QR code
+  (menu bar → *Pair iPhone…*).
 
 ## Project structure
 
@@ -134,7 +138,7 @@ DigitalControler/                 iPhone app
   Theme.swift                     Monochrome glass styling
 
 DigitalControlerMac/              Mac menu bar helper
-  Server.swift                    Bonjour listener, PIN pairing, lockout, ping echo
+  Server.swift                    Bonjour listener, QR pairing secret, lockout, ping echo
   Injector.swift                  Turns messages into mouse, scroll, and keyboard events
   ScreenStreamer.swift            Screen sharing: display list and JPEG thumbnails of every display
   VideoStreamer.swift             One display as live H.264 (ScreenCaptureKit + hardware encoder)
@@ -146,5 +150,5 @@ DigitalControlerMac/              Mac menu bar helper
   gesture events need private macOS APIs.
 - **Keys don't auto-repeat when held.**
 - **Not on the Mac App Store.** The helper runs outside the App Sandbox because it posts input events.
-- **The PIN is short.** A 6-digit PIN is fine on a home network, but someone who records the pairing traffic
-  could brute-force it offline. A long random key shared by QR code would fix that.
+- **Anyone who can see the pairing QR code can pair.** It's only shown when you open *Pair iPhone…*; close it
+  when you're done, and use *Reset pairing* if someone else scanned it.

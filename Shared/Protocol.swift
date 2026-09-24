@@ -104,16 +104,20 @@ enum Downstream: UInt8 {
 }
 
 extension NWParameters {
-    /// TCP + TLS with a pre-shared key derived from the pairing PIN, so a wrong PIN fails the handshake.
-    /// Same approach as Apple's "Building a custom peer-to-peer protocol" sample.
-    // ponytail: 6-digit PIN is brute-forceable offline from a sniffed handshake; upgrade to a long random key shared via QR code if that matters.
-    static func paired(pin: String) -> NWParameters {
+    /// TCP + TLS with a pre-shared key derived from the pairing secret, so a wrong secret fails the handshake.
+    /// Same approach as Apple's "Building a custom peer-to-peer protocol" sample. The secret is 256 random bits
+    /// handed over by QR code, so it can't be guessed or brute-forced from a recorded handshake.
+    static func paired(secret: String) -> NWParameters {
         let tls = NWProtocolTLS.Options()
-        let key = HMAC<SHA256>.authenticationCode(for: Data(serviceType.utf8), using: SymmetricKey(data: Data(pin.utf8)))
+        let key = HMAC<SHA256>.authenticationCode(for: Data(serviceType.utf8), using: SymmetricKey(data: Data(secret.utf8)))
         let keyData = Data(key).withUnsafeBytes { DispatchData(bytes: $0) }
         let identity = Data("DigitalControler".utf8).withUnsafeBytes { DispatchData(bytes: $0) }
         sec_protocol_options_add_pre_shared_key(tls.securityProtocolOptions, keyData as __DispatchData, identity as __DispatchData)
         sec_protocol_options_append_tls_ciphersuite(tls.securityProtocolOptions, tls_ciphersuite_t(rawValue: UInt16(TLS_PSK_WITH_AES_128_GCM_SHA256))!)
+        // Every connection must prove the current secret. With resumption on, a phone that paired once could
+        // skip the key check with a saved session ticket, even with a wrong key or after "Reset pairing".
+        sec_protocol_options_set_tls_resumption_enabled(tls.securityProtocolOptions, false)
+        sec_protocol_options_set_tls_tickets_enabled(tls.securityProtocolOptions, false)
 
         let tcp = NWProtocolTCP.Options()
         tcp.noDelay = true
@@ -150,5 +154,49 @@ enum ParameterSets {
             i += n
         }
         return sets
+    }
+}
+
+/// What the Mac's pairing QR code holds, as a link the iPhone's Camera app can open too:
+/// `digitalcontroler://pair?name=<Bonjour name>&secret=<key>&host=<IPv4, for networks without Bonjour>`
+struct PairingCode: Equatable {
+    static let scheme = "digitalcontroler"
+
+    let name: String
+    let secret: String
+    var host: String?
+
+    var url: URL {
+        var c = URLComponents()
+        c.scheme = Self.scheme
+        c.host = "pair"
+        c.queryItems = [URLQueryItem(name: "name", value: name), URLQueryItem(name: "secret", value: secret)]
+            + (host.map { [URLQueryItem(name: "host", value: $0)] } ?? [])
+        return c.url!
+    }
+
+    /// Nil for anything that isn't a pairing link with a real secret (it came from a camera, so treat it as untrusted).
+    init?(url: URL) {
+        guard let c = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              c.scheme == Self.scheme, c.host == "pair" else { return nil }
+        let items = c.queryItems ?? []
+        func value(_ key: String) -> String? { items.first { $0.name == key }?.value }
+        guard let name = value("name"), !name.isEmpty, name.count <= 255,
+              let secret = value("secret"), secret.count >= 32, secret.count <= 128 else { return nil }
+        self.init(name: name, secret: secret, host: value("host"))
+    }
+
+    init(name: String, secret: String, host: String?) {
+        self.name = name
+        self.secret = secret
+        self.host = host
+    }
+
+    /// 256 random bits, URL-safe.
+    static func newSecret() -> String {
+        var rng = SystemRandomNumberGenerator() // cryptographically secure
+        let bytes = (0..<32).map { _ in UInt8.random(in: .min ... .max, using: &rng) }
+        return Data(bytes).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
     }
 }

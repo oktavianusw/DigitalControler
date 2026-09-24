@@ -5,14 +5,14 @@
 
 import SwiftUI
 import Network
+import Vision
+import VisionKit
 
-/// "Connect to your Mac": nearby Macs found over Bonjour, plus a manual IP fallback.
+/// "Connect to your Mac": nearby Macs found over Bonjour. A Mac is paired once by scanning the QR code
+/// from its menu bar; after that it connects with one tap.
 struct ConnectView: View {
     let client: Client
-    @State private var pickedMac: NWEndpoint?
-    @State private var pin = ""
-    @State private var askingForIP = false
-    @State private var ip = ""
+    @State private var scanning = false
 
     var body: some View {
         ScrollView {
@@ -45,41 +45,35 @@ struct ConnectView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 18)
 
-                Button {
-                    pin = ""
-                    askingForIP = true
-                } label: {
-                    Text("Enter IP manually")
+                Button { scanning = true } label: {
+                    Label("Scan QR code", systemImage: "qrcode.viewfinder")
                         .font(.system(size: 15, weight: .medium))
                         .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.glassCapsule)
                 .padding(.top, 24)
+                Text("New Mac, or a network that hides it? On the Mac, open the DigitalControler menu → Pair iPhone…")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .frame(maxWidth: .infinity)
+                    .multilineTextAlignment(.center)
             }
             .padding(20)
             .frame(maxWidth: 520)
             .frame(maxWidth: .infinity)
         }
         .scrollBounceBehavior(.basedOnSize)
-        .alert("Enter the PIN shown in your Mac's menu bar",
-               isPresented: Binding(get: { pickedMac != nil }, set: { if !$0 { pickedMac = nil } }),
-               presenting: pickedMac) { mac in
-            TextField("PIN", text: $pin).keyboardType(.numberPad)
-            Button("Connect") { client.connect(to: mac, pin: pin) }
-            Button("Cancel", role: .cancel) {}
-        }
-        .alert("Connect by IP address", isPresented: $askingForIP) {
-            TextField("192.168.1.20", text: $ip).keyboardType(.decimalPad)
-            TextField("PIN", text: $pin).keyboardType(.numberPad)
-            Button("Connect") { client.connect(host: ip, pin: pin) }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("The IP is in System Settings → Wi-Fi → Details on your Mac.")
+        .sheet(isPresented: $scanning) {
+            ScanSheet { code in
+                scanning = false
+                client.pair(with: code)
+            }
         }
     }
 
     private func macCard(_ mac: NWEndpoint) -> some View {
-        VStack(spacing: 14) {
+        let secret = Client.savedSecret(for: mac)
+        return VStack(spacing: 14) {
             HStack(spacing: 12) {
                 Image(systemName: "laptopcomputer")
                     .font(.system(size: 20))
@@ -87,20 +81,95 @@ struct ConnectView: View {
                     .glass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(mac.name).font(.system(size: 16, weight: .semibold))
-                    Text(Client.lastMac == mac.name ? "Last used" : "Nearby")
+                    Text(secret == nil ? "Not paired yet" : Client.lastMac == mac.name ? "Last used" : "Paired")
                         .font(.system(size: 13))
                         .foregroundStyle(.white.opacity(0.55))
                 }
                 Spacer()
             }
-            Button("Connect") {
-                pin = Client.savedPin(for: mac)
-                pickedMac = mac
+            Button(secret == nil ? "Pair" : "Connect") {
+                if let secret { client.connect(to: mac, secret: secret) } else { scanning = true }
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(client.connecting)
         }
         .padding(16)
         .glassPanel(radius: 24)
+    }
+}
+
+/// Camera view that picks up the Mac's pairing QR code.
+private struct ScanSheet: View {
+    let found: (PairingCode) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Scan to pair").font(.system(size: 22, weight: .bold))
+                Spacer()
+                Button { dismiss() } label: {
+                    Text("Cancel").font(.system(size: 15, weight: .semibold)).padding(.horizontal, 16).frame(height: 36)
+                }
+                .buttonStyle(.glassCapsule)
+            }
+            Text("On your Mac, click the DigitalControler icon in the menu bar → Pair iPhone…, then point this camera at the code.")
+                .font(.system(size: 14))
+                .foregroundStyle(.white.opacity(0.6))
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Group {
+                if DataScannerViewController.isSupported {
+                    QRScanner(found: found)
+                } else {
+                    Text("This device can't scan here. Point the iPhone's Camera app at the code instead; it opens DigitalControler.")
+                        .font(.system(size: 14))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .padding(24)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .glassPanel(radius: 24)
+        }
+        .padding(20)
+        .foregroundStyle(.white)
+        .presentationBackground(.black)
+        .preferredColorScheme(.dark)
+    }
+}
+
+/// VisionKit's live scanner, QR codes only. Reports the first valid pairing link it sees.
+private struct QRScanner: UIViewControllerRepresentable {
+    let found: (PairingCode) -> Void
+
+    func makeUIViewController(context: Context) -> DataScannerViewController {
+        let scanner = DataScannerViewController(recognizedDataTypes: [.barcode(symbologies: [.qr])],
+                                                qualityLevel: .balanced, isHighlightingEnabled: true)
+        scanner.delegate = context.coordinator
+        return scanner
+    }
+
+    func updateUIViewController(_ scanner: DataScannerViewController, context: Context) {
+        if !scanner.isScanning { try? scanner.startScanning() }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(found: found) }
+
+    final class Coordinator: NSObject, DataScannerViewControllerDelegate {
+        let found: (PairingCode) -> Void
+        private var done = false
+        init(found: @escaping (PairingCode) -> Void) { self.found = found }
+
+        func dataScanner(_ scanner: DataScannerViewController, didAdd items: [RecognizedItem], allItems: [RecognizedItem]) {
+            for case .barcode(let barcode) in items {
+                guard !done, let text = barcode.payloadStringValue, let url = URL(string: text),
+                      let code = PairingCode(url: url) else { continue }
+                done = true // one pairing per scan, even if the code stays in view
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                found(code)
+            }
+        }
     }
 }
