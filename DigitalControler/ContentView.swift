@@ -2,8 +2,6 @@
 //  ContentView.swift
 //  DigitalControler
 //
-//  Created by Jua on 23/09/26.
-//
 
 import SwiftUI
 

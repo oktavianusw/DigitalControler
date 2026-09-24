@@ -14,19 +14,11 @@
 			remoteGlobalIDString = 18771A7530641CC7001C1DB0;
 			remoteInfo = DigitalControler;
 		};
-		18771A9030641CC9001C1DB0 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 18771A6E30641CC7001C1DB0 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 18771A7530641CC7001C1DB0;
-			remoteInfo = DigitalControler;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		18771A7630641CC7001C1DB0 /* DigitalControler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DigitalControler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		18771A8530641CC9001C1DB0 /* DigitalControlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DigitalControlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		18771A8F30641CC9001C1DB0 /* DigitalControlerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DigitalControlerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		18771B0130641CC9001C1DB0 /* DigitalControlerMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DigitalControlerMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -52,11 +44,6 @@
 		18771A8830641CC9001C1DB0 /* DigitalControlerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = DigitalControlerTests;
-			sourceTree = "<group>";
-		};
-		18771A9230641CC9001C1DB0 /* DigitalControlerUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = DigitalControlerUITests;
 			sourceTree = "<group>";
 		};
 		18771B0230641CC9001C1DB0 /* DigitalControlerMac */ = {
@@ -86,13 +73,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		18771A8C30641CC9001C1DB0 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		18771B0530641CC9001C1DB0 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -108,7 +88,6 @@
 			children = (
 				18771A7830641CC7001C1DB0 /* DigitalControler */,
 				18771A8830641CC9001C1DB0 /* DigitalControlerTests */,
-				18771A9230641CC9001C1DB0 /* DigitalControlerUITests */,
 				18771B0230641CC9001C1DB0 /* DigitalControlerMac */,
 				18771B0330641CC9001C1DB0 /* Shared */,
 				18771A7730641CC7001C1DB0 /* Products */,
@@ -120,7 +99,6 @@
 			children = (
 				18771A7630641CC7001C1DB0 /* DigitalControler.app */,
 				18771A8530641CC9001C1DB0 /* DigitalControlerTests.xctest */,
-				18771A8F30641CC9001C1DB0 /* DigitalControlerUITests.xctest */,
 				18771B0130641CC9001C1DB0 /* DigitalControlerMac.app */,
 			);
 			name = Products;
@@ -175,29 +153,6 @@
 			productReference = 18771A8530641CC9001C1DB0 /* DigitalControlerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		18771A8E30641CC9001C1DB0 /* DigitalControlerUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 18771A9F30641CC9001C1DB0 /* Build configuration list for PBXNativeTarget "DigitalControlerUITests" */;
-			buildPhases = (
-				18771A8B30641CC9001C1DB0 /* Sources */,
-				18771A8C30641CC9001C1DB0 /* Frameworks */,
-				18771A8D30641CC9001C1DB0 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				18771A9130641CC9001C1DB0 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				18771A9230641CC9001C1DB0 /* DigitalControlerUITests */,
-			);
-			name = DigitalControlerUITests;
-			packageProductDependencies = (
-			);
-			productName = DigitalControlerUITests;
-			productReference = 18771A8F30641CC9001C1DB0 /* DigitalControlerUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 		18771B0730641CC9001C1DB0 /* DigitalControlerMac */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 18771B0830641CC9001C1DB0 /* Build configuration list for PBXNativeTarget "DigitalControlerMac" */;
@@ -238,10 +193,6 @@
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = 18771A7530641CC7001C1DB0;
 					};
-					18771A8E30641CC9001C1DB0 = {
-						CreatedOnToolsVersion = 26.6;
-						TestTargetID = 18771A7530641CC7001C1DB0;
-					};
 					18771B0730641CC9001C1DB0 = {
 						CreatedOnToolsVersion = 26.6;
 					};
@@ -263,7 +214,6 @@
 			targets = (
 				18771A7530641CC7001C1DB0 /* DigitalControler */,
 				18771A8430641CC9001C1DB0 /* DigitalControlerTests */,
-				18771A8E30641CC9001C1DB0 /* DigitalControlerUITests */,
 				18771B0730641CC9001C1DB0 /* DigitalControlerMac */,
 			);
 		};
@@ -278,13 +228,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		18771A8330641CC9001C1DB0 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		18771A8D30641CC9001C1DB0 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -315,13 +258,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		18771A8B30641CC9001C1DB0 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		18771B0430641CC9001C1DB0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -336,11 +272,6 @@
 			isa = PBXTargetDependency;
 			target = 18771A7530641CC7001C1DB0 /* DigitalControler */;
 			targetProxy = 18771A8630641CC9001C1DB0 /* PBXContainerItemProxy */;
-		};
-		18771A9130641CC9001C1DB0 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 18771A7530641CC7001C1DB0 /* DigitalControler */;
-			targetProxy = 18771A9030641CC9001C1DB0 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -398,7 +329,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -456,7 +387,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -544,7 +475,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7RQ9DQUGKZ;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jua.DigitalControlerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -566,7 +497,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7RQ9DQUGKZ;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jua.DigitalControlerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -577,46 +508,6 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DigitalControler.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DigitalControler";
-			};
-			name = Release;
-		};
-		18771AA030641CC9001C1DB0 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7RQ9DQUGKZ;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jua.DigitalControlerUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = DigitalControler;
-			};
-			name = Debug;
-		};
-		18771AA130641CC9001C1DB0 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7RQ9DQUGKZ;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jua.DigitalControlerUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = DigitalControler;
 			};
 			name = Release;
 		};
@@ -706,15 +597,6 @@
 			buildConfigurations = (
 				18771A9D30641CC9001C1DB0 /* Debug */,
 				18771A9E30641CC9001C1DB0 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		18771A9F30641CC9001C1DB0 /* Build configuration list for PBXNativeTarget "DigitalControlerUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				18771AA030641CC9001C1DB0 /* Debug */,
-				18771AA130641CC9001C1DB0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -8,7 +8,7 @@ import Network
 import CryptoKit
 
 let serviceType = "_digitalctl._tcp"
-/// Fixed so "Enter IP manually" works without Bonjour. The Mac falls back to any free port if it's taken.
+/// Fixed so the pairing QR code's IP fallback works without Bonjour. The Mac falls back to any free port if it's taken.
 let servicePort: UInt16 = 51515
 
 /// Fixed-size wire message: 1 byte kind + two little-endian Float32.
