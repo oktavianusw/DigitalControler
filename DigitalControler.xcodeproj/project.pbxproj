@@ -19,7 +19,7 @@
 /* Begin PBXFileReference section */
 		18771A7630641CC7001C1DB0 /* DigitalControler.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DigitalControler.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		18771A8530641CC9001C1DB0 /* DigitalControlerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DigitalControlerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		18771B0130641CC9001C1DB0 /* DigitalControlerMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DigitalControlerMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		18771B0130641CC9001C1DB0 /* DigitalControlerMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = DigitalControlerMac.app; path = Touche.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -522,8 +522,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Touche;
+				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Touche listens on the local network so your iPhone can act as this Mac's trackpad.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -552,8 +552,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Touche;
+				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Touche listens on the local network so your iPhone can act as this Mac's trackpad.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

@@ -22,6 +22,9 @@ final class Server {
     private var failedAttempts = 0
     private let screen = ScreenStreamer()
     private(set) var sharingScreen = false
+    private let pacer = Pacer(play: Injector.handle)
+    /// How bursty the iPhone's messages arrive, in ms, while one is connected.
+    private(set) var jitterMs: Int?
 
     init() { start() }
 
@@ -123,6 +126,8 @@ final class Server {
 
     /// The iPhone went away (or was replaced): release held buttons and stop sharing the screen.
     private func endSession() {
+        pacer.reset()
+        jitterMs = nil
         Injector.reset()
         screen.stop()
         sharingScreen = false
@@ -153,9 +158,14 @@ final class Server {
             screen.stop()
             sharingScreen = false
         case .moveTo:
+            pacer.flush()
             Injector.moveTo(x: CGFloat(m.dx), y: CGFloat(m.dy),
                             on: screen.displayBounds ?? CGDisplayBounds(CGMainDisplayID()))
+        case .move, .scroll:
+            pacer.hold(m)
+            if jitterMs != pacer.jitterMs { jitterMs = pacer.jitterMs }
         default:
+            pacer.flush() // a click lands where the held moves were taking the pointer
             Injector.handle(m)
         }
     }

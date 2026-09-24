@@ -66,6 +66,10 @@ private struct MenuContent: View {
             NSApp.activate() // menu bar apps don't come forward on their own
         }
         Text(server.status)
+        if let jitter = server.jitterMs {
+            // Past the pacer's 15 ms buffer, some moves arrive too late to smooth and the pointer may hitch.
+            Text("Wi-Fi jitter: \(jitter) ms")
+        }
         if AXIsProcessTrusted() {
             Text("Accessibility: allowed ✓")
         } else {

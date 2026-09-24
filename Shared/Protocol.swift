@@ -8,10 +8,13 @@ import Network
 import CryptoKit
 
 let serviceType = "_digitalctl._tcp"
+/// Bump when `Message` changes shape. It's mixed into the TLS key, so an app and a Mac helper from
+/// different versions fail the handshake instead of misreading each other's bytes as clicks and keys.
+let protocolVersion = 2
 /// Fixed so the pairing QR code's IP fallback works without Bonjour. The Mac falls back to any free port if it's taken.
 let servicePort: UInt16 = 51515
 
-/// Fixed-size wire message: 1 byte kind + two little-endian Float32.
+/// Fixed-size wire message: 1 byte kind + two little-endian Float32 + little-endian UInt32 time.
 /// Fixed size means no framing: the receiver just reads `Message.size` bytes at a time.
 struct Message: Equatable {
     enum Kind: UInt8, CaseIterable {
@@ -43,18 +46,27 @@ struct Message: Equatable {
         static let command = Modifiers(rawValue: 1 << 3)
         static let function = Modifiers(rawValue: 1 << 4)
     }
-    static let size = 9
+    static let size = 13
 
     var kind: Kind
     var dx: Float = 0
     var dy: Float = 0
+    /// When it happened on the iPhone, in ms (see `clock`). Lets the Mac replay moves at the finger's pace.
+    var time: UInt32 = 0
 
     var data: Data {
         var d = Data([kind.rawValue])
         for v in [dx, dy] {
             withUnsafeBytes(of: v.bitPattern.littleEndian) { d.append(contentsOf: $0) }
         }
+        withUnsafeBytes(of: time.littleEndian) { d.append(contentsOf: $0) }
         return d
+    }
+
+    /// Seconds of system uptime (UIEvent timestamps, ProcessInfo.systemUptime) as wire time.
+    /// Wraps after 49 days; only differences between messages are ever used.
+    static func clock(_ seconds: TimeInterval) -> UInt32 {
+        UInt32(truncatingIfNeeded: Int64(seconds * 1000))
     }
 }
 
@@ -63,20 +75,20 @@ extension Message {
     init?(_ data: Data) {
         let b = [UInt8](data)
         guard b.count == Self.size, let kind = Kind(rawValue: b[0]) else { return nil }
-        func float(_ i: Int) -> Float {
-            Float(bitPattern: UInt32(b[i]) | UInt32(b[i + 1]) << 8 | UInt32(b[i + 2]) << 16 | UInt32(b[i + 3]) << 24)
+        func uint(_ i: Int) -> UInt32 {
+            UInt32(b[i]) | UInt32(b[i + 1]) << 8 | UInt32(b[i + 2]) << 16 | UInt32(b[i + 3]) << 24
         }
-        let dx = float(1), dy = float(5)
+        let dx = Float(bitPattern: uint(1)), dy = Float(bitPattern: uint(5))
         // 0x10FFFF (largest Unicode scalar) must fit for .text; anything past that is garbage.
         guard dx.isFinite, dy.isFinite, abs(dx) <= 0x10FFFF, abs(dy) <= 0x10FFFF else { return nil }
-        self.init(kind: kind, dx: dx, dy: dy)
+        self.init(kind: kind, dx: dx, dy: dy, time: uint(9))
     }
 }
 
 /// Mac → iPhone messages vary in size (a screen frame is ~100 KB), so each carries a
 /// 5-byte header: 1 byte kind + little-endian UInt32 payload length.
 enum Downstream: UInt8 {
-    case pong         // payload: the iPhone's 9-byte ping, echoed back
+    case pong         // payload: the iPhone's ping message, echoed back
     case frame        // payload: 1 byte display index, then one JPEG of that display
     case screenError  // payload: UTF-8 reason the screen can't be shared
     case displays     // payload: UTF-8 display names, one per line, left to right as arranged on the Mac
@@ -109,7 +121,8 @@ extension NWParameters {
     /// handed over by QR code, so it can't be guessed or brute-forced from a recorded handshake.
     static func paired(secret: String) -> NWParameters {
         let tls = NWProtocolTLS.Options()
-        let key = HMAC<SHA256>.authenticationCode(for: Data(serviceType.utf8), using: SymmetricKey(data: Data(secret.utf8)))
+        let key = HMAC<SHA256>.authenticationCode(for: Data("\(serviceType)/\(protocolVersion)".utf8),
+                                                  using: SymmetricKey(data: Data(secret.utf8)))
         let keyData = Data(key).withUnsafeBytes { DispatchData(bytes: $0) }
         let identity = Data("DigitalControler".utf8).withUnsafeBytes { DispatchData(bytes: $0) }
         sec_protocol_options_add_pre_shared_key(tls.securityProtocolOptions, keyData as __DispatchData, identity as __DispatchData)

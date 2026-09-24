@@ -41,7 +41,11 @@ final class Client {
 
     func startBrowsing() {
         guard browser == nil else { return }
-        let b = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: .tcp)
+        // Peer-to-peer too, like the connection itself: finds the Mac over Apple's direct Wi-Fi link (AWDL)
+        // when the router doesn't pass Bonjour, or the two aren't on the same network.
+        let params = NWParameters.tcp
+        params.includePeerToPeer = true
+        let b = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: params)
         b.browseResultsChangedHandler = { [weak self] results, _ in
             MainActor.assumeIsolated {
                 self?.macs = results.sorted { $0.endpoint.name < $1.endpoint.name }
@@ -126,6 +130,8 @@ final class Client {
     }
 
     func send(_ m: Message) {
+        var m = m
+        if m.time == 0 { m.time = Message.clock(ProcessInfo.processInfo.systemUptime) } // touches bring their own
         connection?.send(content: m.data, completion: .idempotent)
     }
 

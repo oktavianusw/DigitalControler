@@ -35,10 +35,14 @@ reads your fingers                  turns messages into real input events
   pre-shared key, so all traffic is encrypted and a phone without the current secret fails the handshake. TLS
   session resumption is off, so every connection proves the secret, and *Reset pairing* shuts out every phone.
   The iPhone keeps the secret in its Keychain, on that device only.
-- **Protocol:** every iPhone → Mac message is 9 bytes (1-byte kind + two Float32 values), sent over TCP with
-  Nagle off. Mac → iPhone messages (latency echoes, screen video, thumbnails) carry a 5-byte kind + length
+- **Protocol:** every iPhone → Mac message is 13 bytes (1-byte kind + two Float32 values + a UInt32 timestamp in ms),
+  sent over TCP with Nagle off. Mac → iPhone messages (latency echoes, screen video, thumbnails) carry a 5-byte kind + length
   header; kinds the app doesn't know are skipped, so an older app keeps working with a newer helper.
   The traffic is marked as interactive so Wi-Fi power saving doesn't hold packets back.
+- **Smoothing:** Wi-Fi delivers messages in bursts, which makes a pointer lurch. Each move carries the time the
+  finger moved, and the helper replays moves and scrolls at that pace through a small (15 ms) jitter buffer
+  instead of the moment they arrive. Clicks and keys flush the buffer first, so they land where the pointer was
+  headed. The helper's menu shows the current Wi-Fi jitter.
 - **Input on the Mac:** the helper posts `CGEvent`s. Scrolls are trackpad-style (continuous pixel deltas with
   scroll and momentum phases), so apps rubber-band and glide like they do with a real trackpad.
 
@@ -130,6 +134,7 @@ iPhone finds the Mac without you opening anything. Turn it off with *Open at Log
 - **The Mac doesn't show up on the iPhone.** Check that both devices are on the same Wi-Fi and that Local Network
   access is on for Touche (iPhone Settings → Privacy & Security → Local Network). Scanning the QR code
   still works: it connects by IP.
+- **"Couldn't connect" after updating.** The app and the Mac helper must come from the same version: rebuild both.
 - **"Couldn't connect" after it used to work.** Pairing was probably reset on the Mac. Scan the new QR code
   (menu bar → *Pair iPhone…*).
 
@@ -137,6 +142,7 @@ iPhone finds the Mac without you opening anything. Turn it off with *Open at Log
 
 ```
 Shared/Protocol.swift             Wire format, service name/port, TLS-PSK pairing (used by both apps)
+Shared/PlayoutClock.swift         Jitter buffer timing: when the Mac should play each move
 
 DigitalControler/                 iPhone app
   Client.swift                    Bonjour browsing, connection, auto-reconnect, latency ping
@@ -151,6 +157,7 @@ DigitalControler/                 iPhone app
 
 DigitalControlerMac/              Mac menu bar helper
   Server.swift                    Bonjour listener, QR pairing secret, lockout, ping echo
+  Pacer.swift                     Holds moves and scrolls until their time, so the pointer follows the finger's rhythm
   Injector.swift                  Turns messages into mouse, scroll, and keyboard events
   ScreenStreamer.swift            Screen sharing: display list and JPEG thumbnails of every display
   VideoStreamer.swift             One display as live H.264 (ScreenCaptureKit + hardware encoder)
@@ -171,7 +178,14 @@ DigitalControlerMac/              Mac menu bar helper
 xcodebuild test -project DigitalControler.xcodeproj -scheme DigitalControler -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-The unit tests cover the wire format, framing, pairing codes, and Keychain storage. CI runs them on every push.
+The unit tests cover the wire format, framing, pairing codes, Keychain storage, and the jitter buffer. CI runs them on every push.
+
+To see how bursty the network really is, stream the helper's pacing trace while you use the trackpad (one line per
+move: iPhone time, arrival, play time):
+
+```bash
+/usr/bin/log stream --level debug --predicate 'subsystem == "com.jua.DigitalControlerMac" AND category == "pacer"'
+```
 
 Every view has an Xcode preview (Editor → Canvas). The Screen and Remote previews use `Client.preview()`, a stand-in
 that looks connected to a Mac sharing three displays, so you can work on those screens without a Mac.

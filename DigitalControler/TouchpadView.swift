@@ -31,10 +31,12 @@ struct TouchpadView: UIViewRepresentable {
         pad.onGesture = onGesture
     }
 
-    /// Pointer acceleration in pt/s: slow finger = precise, fast flick = crosses the screen.
+    /// Pointer acceleration by finger speed in pt/s: slow = precise, fast flick = crosses the screen.
+    /// An S-curve, so the gain eases in and out instead of kinking where it starts and where it tops out.
     // ponytail: hand-tuned curve; the Settings sliders scale it.
     static func gain(speed: CGFloat) -> CGFloat {
-        1.2 + 2.8 * min(speed / 1500, 1)
+        let t = min(speed / 1500, 1)
+        return 1.2 + 2.8 * t * t * (3 - 2 * t)
     }
 
     // ponytail: hand-tuned feel knobs.
@@ -63,6 +65,7 @@ struct TouchpadView: UIViewRepresentable {
         private var scrolled = false    // this gesture scrolled at some point
         private var scrolling = false   // scroll in progress right now
         private var scrollVelocity = CGPoint.zero
+        private var pointerSpeed: CGFloat = 0 // smoothed, so one jittery sample doesn't jerk the gain
         private var dragging = false
         private var holdTimer: Timer?
         private var pinching = false
@@ -114,6 +117,7 @@ struct TouchpadView: UIViewRepresentable {
                 swipe = .zero
                 swiped = false
                 secondFingerLate = false
+                pointerSpeed = 0
                 tapHaptic.prepare()
                 holdTimer = Timer.scheduledTimer(withTimeInterval: TouchpadView.holdToDrag, repeats: false) { [weak self] _ in
                     MainActor.assumeIsolated { self?.beginDrag() }
@@ -139,9 +143,11 @@ struct TouchpadView: UIViewRepresentable {
             if travel >= TouchpadView.tapMaxTravel { cancelHold() }
             guard dt > 0 else { return }
 
+            let time = Message.clock(now) // when the finger moved, so the Mac can replay it at that pace
             if maxFingers == 1 {
-                let g = TouchpadView.gain(speed: hypot(d.x, d.y) / dt) * options.pointerSpeed
-                send(Message(kind: .move, dx: Float(d.x * g), dy: Float(d.y * g)))
+                pointerSpeed = pointerSpeed * 0.5 + hypot(d.x, d.y) / dt * 0.5
+                let g = TouchpadView.gain(speed: pointerSpeed) * options.pointerSpeed
+                send(Message(kind: .move, dx: Float(d.x * g), dy: Float(d.y * g), time: time))
             } else if maxFingers == 2, fingersDown(event) == 2 {
                 if !scrolling, let s = spread(event), pinchBase > 0 {
                     // Pinch vs scroll: fingers moving apart/together change the spread more than they move the center.
@@ -166,7 +172,7 @@ struct TouchpadView: UIViewRepresentable {
                 scrollVelocity.x = scrollVelocity.x * 0.6 + d.x / dt * 0.4
                 scrollVelocity.y = scrollVelocity.y * 0.6 + d.y / dt * 0.4
                 let g = TouchpadView.scrollGain * options.scrollSpeed * scrollSign
-                send(Message(kind: .scroll, dx: Float(d.x * g), dy: Float(d.y * g)))
+                send(Message(kind: .scroll, dx: Float(d.x * g), dy: Float(d.y * g), time: time))
             } else if maxFingers == 3, !swiped {
                 swipe.x += d.x
                 swipe.y += d.y

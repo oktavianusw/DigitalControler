@@ -10,7 +10,7 @@ import XCTest
 final class DigitalControlerTests: XCTestCase {
 
     func testMessageRoundTrip() {
-        let m = Message(kind: .move, dx: -3.5, dy: 120.25)
+        let m = Message(kind: .move, dx: -3.5, dy: 120.25, time: 4_000_000_123)
         XCTAssertEqual(m.data.count, Message.size)
         XCTAssertEqual(Message(m.data), m)
         for kind in Message.Kind.allCases {
@@ -20,7 +20,7 @@ final class DigitalControlerTests: XCTestCase {
 
     func testMessageRejectsGarbage() {
         XCTAssertNil(Message(Data([0, 1, 2])))                                 // wrong size
-        XCTAssertNil(Message(Data([99] + [UInt8](repeating: 0, count: 8))))    // unknown kind
+        XCTAssertNil(Message(Data([99] + [UInt8](repeating: 0, count: Message.size - 1))))  // unknown kind
         var nan = Message(kind: .move).data
         nan.replaceSubrange(1..<5, with: withUnsafeBytes(of: Float.nan.bitPattern.littleEndian, Array.init))
         XCTAssertNil(Message(nan))                                             // non-finite delta
@@ -66,6 +66,26 @@ final class DigitalControlerTests: XCTestCase {
         UserDefaults.standard.set("legacy", forKey: "secret." + mac + "2")
         XCTAssertEqual(PairingSecrets.get(for: mac + "2"), "legacy")               // migrated from UserDefaults...
         XCTAssertNil(UserDefaults.standard.string(forKey: "secret." + mac + "2")) // ...and removed there
+    }
+
+    func testPlayoutKeepsTheFingersPace() {
+        var clock = PlayoutClock()
+        let offset = 100.0 // the Mac's clock runs 100 s ahead of the iPhone's; only differences matter
+        // Moves 8 ms apart: the first has a fast 5 ms trip, the next three are stuck and arrive together.
+        let first = clock.due(stamp: 1_000, arrivedAt: offset + 1.005)
+        let burst = [1_008, 1_016, 1_024].map { clock.due(stamp: UInt32($0), arrivedAt: offset + 1.040) }
+        XCTAssertEqual(first, offset + 1.005 + clock.buffer, accuracy: 1e-9) // fastest trip + buffer
+        for (i, due) in burst.enumerated() {
+            XCTAssertEqual(due - first, 0.008 * Double(i + 1), accuracy: 1e-9)  // spread out again, 8 ms apart
+        }
+        XCTAssertEqual(clock.jitter, 0.032 - 0.005, accuracy: 1e-9)            // slowest trip minus fastest
+    }
+
+    func testPlayoutSurvivesTheClockWrapping() {
+        var clock = PlayoutClock()
+        let before = clock.due(stamp: .max - 3, arrivedAt: 50)      // 4 ms before UInt32 rolls over
+        let after = clock.due(stamp: 4, arrivedAt: 50.008)           // 4 ms after
+        XCTAssertEqual(after - before, 0.008, accuracy: 1e-9)
     }
 
     func testGainGrowsWithSpeedAndIsCapped() {
