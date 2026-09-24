@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/icon.png" alt="DigitalControler app icon: a glowing white dot inside soft concentric rings" width="128">
+</p>
+
 # DigitalControler
 
 Turn your iPhone into a trackpad and keyboard for your Mac, over your local Wi-Fi.
